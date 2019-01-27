@@ -1,0 +1,260 @@
+#!/usr/bin/env bash
+#
+# A kubectl plugin to ssh into Kubernetes nodes using a SSH jump host Pod
+#
+
+[[ -n $DEBUG ]] && set -x -e
+
+PLUGIN_DIR="${HOME}/.kube/kubectlssh"
+PLUGIN_SSH_OPTIONS_FILE="${PLUGIN_DIR}/options"
+MAX_POD_CREATION_TIME=10   # unit: second
+SSH_AGENT_ENV_FILE="${PLUGIN_DIR}/sshagent-env"
+SSH_AGENT_PID_FILE="${PLUGIN_DIR}/sshagent-pid"
+
+help(){
+  echo "Usage: "
+  echo "  kubectl ssh <dest_node> [options]"
+  echo ""
+  options
+}
+
+options(){
+  cat <<"EOF"
+Options:
+  <dest_node>                     Destination node IP
+  -u, --user <sshuser>            SSH User name
+  -i, --identity <identity_file>  Identity key file
+  -p, --pubkey <pub_key_file>     Public key file
+  --skip-agent                    Skip automatically starting SSH agent and adding 
+                                  SSH Identity key into the agent before SSH login
+                                  (=> You need to manage SSH agent by yourself)
+  --cleanup-agent                 Clearning up SSH agent at the end
+                                  The agent is NOT cleaned up in case that
+                                  --skip-agent option is given
+  --cleanup-jump                  Clearning up sshjump pod at the end
+                                  Default: Skip cleaning up sshjump pod
+  -h, --help                      Show this message
+
+Example:
+   ....
+EOF
+}
+
+read_options(){
+  if [[ -f "${PLUGIN_SSH_OPTIONS_FILE}" ]]; then
+    source ${PLUGIN_SSH_OPTIONS_FILE}
+  fi  
+}
+
+write_options(){
+  local sshuser="$1"
+  local identity="$2"
+  local pubkey="$3"
+
+  cat << EOF > ${PLUGIN_SSH_OPTIONS_FILE}
+sshuser=${sshuser}
+identity=${identity}
+pubkey=${pubkey}
+EOF
+}
+
+get_node_list(){
+  echo "List of destination node..."
+  kubectl get no -o custom-columns=Hostname:.metadata.name
+  echo ""
+}
+
+cleanup_sshjump_pod(){
+  echo "Clearning up SSH Jump host (Pod)..."
+  kubectl delete pod sshjump
+}
+
+check_and_start_agent(){
+  local identity="$1"
+
+  is_alive="no"
+  if [ -f ${SSH_AGENT_PID_FILE} ]; then
+    SSH_AGENT_PID=$(cat ${SSH_AGENT_PID_FILE})
+    source ${SSH_AGENT_ENV_FILE}
+    if [ ${SSH_AGENT_PID} -gt 0 ] && ps -p ${SSH_AGENT_PID} > /dev/null
+    then
+      echo "ssh-agent is already running"
+      is_alive="yes"
+    fi
+  fi
+  if [ "${is_alive}" = "no" ]; then
+    ssh-agent > ${SSH_AGENT_ENV_FILE}
+    agent_pid=$(cat ${SSH_AGENT_ENV_FILE} | grep 'echo Agent pid' |sed 's/echo Agent pid //; s/;//')
+    echo "Started ssh-agent: pid=${agent_pid}"
+    echo ${agent_pid} > ${SSH_AGENT_PID_FILE}
+    source ${SSH_AGENT_ENV_FILE}
+    ssh-add ${identity}
+  fi
+}
+
+cleanup_agent(){
+  echo "Killing ssh-agent..."
+  ssh-agent -k
+  if [ -f ${SSH_AGENT_PID_FILE} ]; then
+    rm ${SSH_AGENT_PID_FILE}
+  fi 
+  if [ -f ${SSH_AGENT_ENV_FILE} ]; then
+    rm ${SSH_AGENT_ENV_FILE}
+  fi 
+}
+
+run_ssh_node(){
+  local destnode="$1"
+  local sshuser="$2"
+  local identity="$3"
+  local pubkey="$4"
+
+  # Install an SSH Server if not yet installed
+  r=$(kubectl get pod sshjump 2>/dev/null | tail -1 | awk '{print $1}')
+  if [ "${r}" != "sshjump" ];then
+    echo "Creating SSH jump host (Pod)..."
+    kubectl run sshjump --image=corbinu/ssh-server --port=22 --restart=Never
+    # Wait until sshjump gets ready
+    c=1
+    while [[ ${c} -le ${MAX_POD_CREATION_TIME} ]];
+    do
+      pod_status=$(kubectl get pod sshjump 2>/dev/null | tail -1 | awk '{print $3}')
+      if [ "${pod_status}" = "Running" ]; then
+        break
+      fi
+      (( c++ ))
+      sleep 1
+    done
+  fi
+
+  # Setup portforward
+  kubectl port-forward sshjump 2222:22 2>/dev/null &
+  pid_port_forward=$!
+  # Inject public SSH key to sshjump
+  cat ${pubkey} | kubectl exec -i sshjump -- /bin/bash -c "cat >> /root/.ssh/authorized_keys"
+
+  # Using the SSH Server as a jumphost (via port-forward proxy), ssh into the desired Node
+  ssh -i ${identity} -J root@127.0.0.1:2222 ${sshuser}@${destnode}
+  # Stop port-forward
+  kill -3 ${pid_port_forward} 2>/dev/null
+}
+
+plugin_main(){
+  skip_agent="no"
+  cleanup_jump="no"
+  cleanup_agent="no"
+
+  for arg in "$@"; do
+    option=""
+    if [ "${arg:0:1}" = "-" ]; then
+      if [ "${arg:1:1}" = "-" ]; then
+        option="${arg:2}"
+        prevopt="${arg:2}"
+      else
+        index=1
+        while o="${arg:$index:1}"; do
+          [ -n "$o" ] || break
+          option="$o"
+          prevopt="$o"
+          let index+=1
+        done
+      fi
+      case "${option}" in
+      "h" | "help" )
+        help
+        exit 0
+        ;;
+      "cleanup-jump" )
+        cleanup_jump="yes"
+        ;;
+      "cleanup-agent" )
+        cleanup_agent="yes"
+        ;;
+      "skip-agent" )
+        skip_agent="yes"
+        ;;
+      esac
+    else
+      if [ "${prevopt}" = "" ]; then
+        destnode="${arg}"
+      else
+        case "${prevopt}" in
+        "u" | "user" )
+          c_sshuser="${arg}"
+          ;;
+        "i" | "identity" )
+          c_identity="${arg}"
+          ;;
+        "p" | "pubkey" )
+          c_pubkey="${arg}"
+          ;;
+        * )
+          help >&2
+          exit 1
+          ;;
+        esac
+      fi 
+    fi 
+  done
+
+  if [[ "$(type kubectl &>/dev/null; echo $?)" -eq 1 ]]; then
+    echo "Error: missing kubectl command" >&2
+    echo "Please install kubectl (https://kubernetes.io/docs/tasks/tools/install-kubectl/)" >&2
+    exit 1
+  fi
+
+  if [ ! -n "${destnode}" ]; then
+    help >&2
+    echo ""
+    get_node_list
+    exit 1
+  fi
+
+  if [ ! -d ${PLUGIN_DIR} ]; then
+    mkdir -p ${PLUGIN_DIR}
+  fi
+  read_options
+
+  if [ ! -n "${c_sshuser}" ]; then
+    if [ ! -n "${sshuser}" ]; then
+      c_sshuser="$USER"  # default: Current executing user
+    fi
+    echo "using: sshuser=$sshuser"
+    c_sshuser="${sshuser}"
+  fi
+  if [ ! -f "${c_identity}" ]; then
+    if [ ! -f "${identity}" ]; then
+      help >&2
+      exit 1
+    fi
+    echo "using: identity=$identity"
+    c_identity="${identity}"
+  fi
+  if [ ! -f "${c_pubkey}" ]; then
+    if [ ! -f "${pubkey}" ]; then
+      help >&2
+      exit 1
+    fi
+    echo "using: pubkey=$pubkey"
+    c_pubkey="${pubkey}"
+  fi
+
+  # Caching current ssh options
+  write_options ${c_sshuser} ${c_identity} ${c_pubkey}
+
+  if [ "${skip_agent}" = "no" ]; then
+    check_and_start_agent ${c_identity}
+  fi
+  # SSH Logging into desitnation node via Jump host
+  run_ssh_node ${destnode} ${c_sshuser} ${c_identity} ${c_pubkey}
+
+  # Cleaning up resources if needed
+  if [ "${cleanup_jump}" = "yes" ]; then
+    cleanup_sshjump_pod
+  fi
+  if [ "${skip_agent}" = "no" ] && [ "${cleanup_agent}" = "yes" ]; then
+    cleanup_agent
+  fi
+}
+
+plugin_main "$@"
