@@ -73,10 +73,10 @@ pubkey=/Users/yokawasa/.ssh/id_rsa_k8s.pub
 
 #### SSH Agent (ssh-agent)
 
-The plugin automatically check if there are any `ssh-agents` started running by the plugin, and if `ssh-agent` not found, the plugin starts `ssh-agent` and adds SSH Identity key into the agent before SSH login. If the command find that ssh-agent is already running, it doesn't start a new agent, and re-use the agent.
-You can kill the created agent with `--cleanup-agent` at the end of command.
+The plugin automatically check if there are any `ssh-agents` started running by the plugin, and starts `ssh-agent`if it doesn't find any `ssh-agent` running and adds SSH Identity key into the agent before SSH login. If the command find that ssh-agent is already running, it doesn't start a new agent, and re-use the agent.
+Add `--cleanup-agent` option if you want to kill the created agent at the end of command.
 
-In addtion, you can skip starting `ssh-agent` by giving `--skip-agent`. This is actually a case where you already have ssh-agent managed.
+In addtion, add `--skip-agent` option if you want to skip automatic starting `ssh-agent`. This is actually a case where you already have ssh-agent managed or you want to manually start the agent.
 
 ### Examples
 
@@ -165,6 +165,11 @@ $ kubectl ssh aks-nodepool1-18558189-0 \
 # At the end, run this if you want to kill the current agent
 $ ssh-agent -k
 ```
+
+## Useful Links
+- [Extend kubectl with plugins](https://kubernetes.io/docs/tasks/extend-kubectl/kubectl-plugins/)
+- [Write your own kubectl subcommands](https://ahmet.im/blog/kubectl-plugins/)
+- [SSH-AGENT - SINGLE SIGN-ON USING SSH](https://www.ssh.com/ssh/agent)
 
 ## Contributing
 
