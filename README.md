@@ -16,6 +16,11 @@ Here is an scenario where you want to connect to Kubernetes node, but you have t
 >   - You still can run the plugin directly with `kubectl-ssh-jump ...`
 
 
+## Pre-requistes
+This plugin needs the following programs:
+* ssh(1)	
+* ssh-agent(1)
+
 ## Installation
 
 ### Manual Installation
