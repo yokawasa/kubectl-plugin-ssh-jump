@@ -1,4 +1,4 @@
-# kubectl-plugin-ssh-jumphost
+# kubectl-plugin-ssh-jump
 
 A kubectl plugin to SSH into Kubernetes nodes using a SSH jump host Pod
 
@@ -11,22 +11,24 @@ Here is an scenario where you want to connect to Kubernetes node, but you have t
 > [NOTE]
 > - Kubectl versions >= `1.12.0` (Preferred)
 >   - As of Kubernetes 1.12, kubectl now allows adding external executables as subcommands. For more detail, see [Extend kubectl with plugins](https://kubernetes.io/docs/tasks/extend-kubectl/kubectl-plugins/)
->   - You can run the pluin with `kubectl ssh ...`
+>   - You can run the pluin with `kubectl ssh-jump ...`
 > - Kubectl versions < `1.12.0`
->   - You still can run the plugin directly with `kubectl-ssh ...`
+>   - You still can run the plugin directly with `kubectl-ssh-jump ...`
 
 
 ## Installation
+
+### Manual Installation
 
 Install the plugin by copying the script in the $PATH of your shell.
 
 ```sh
 # Get source
-$ git clone https://github.com/yokawasa/kubectl-plugin-ssh-jumphost.git
-$ cd kubectl-plugin-ssh-jumphost
-$ chmod +x kubectl-ssh
-# Add kubeclt-ssh to the install path.
-$ sudo cp -p kubectl-ssh /usr/local/bin
+$ git clone https://github.com/yokawasa/kubectl-plugin-ssh-jump.git
+$ cd kubectl-plugin-ssh-jump
+$ chmod +x kubectl-ssh-jump
+# Add kubeclt-ssh-jump to the install path.
+$ sudo cp -p kubectl-ssh-jump /usr/local/bin
 ```
 
 Once in the $PATH, run:
@@ -34,9 +36,9 @@ Once in the $PATH, run:
 $ kubectl plugin list
 
 The following kubectl-compatible plugins are available:
-/usr/local/bin/kubectl-ssh
+/usr/local/bin/kubectl-ssh-jump
 
-$ kubectl ssh
+$ kubectl ssh-jump
 ```
 
 ## How to use
@@ -45,7 +47,7 @@ $ kubectl ssh
 
 ```TXT
 Usage:
-  kubectl ssh <dest_node> [options]
+  kubectl ssh-jump <dest_node> [options]
 
 Options:
   <dest_node>                     Destination node IP
@@ -81,13 +83,13 @@ In addtion, add `--skip-agent` option if you want to skip automatic starting `ss
 
 ### Examples
 
-Show all node list. Simply executing `kubectl ssh` gives you the list of destination nodes as well as command usage
+Show all node list. Simply executing `kubectl ssh-jump` gives you the list of destination nodes as well as command usage
 
 ```sh 
-$ kubectl ssh
+$ kubectl ssh-jump
 
 Usage:
-  kubectl ssh <dest_node> [options]
+  kubectl ssh-jump <dest_node> [options]
 
 Options:
   <dest_node>                     Destination node IP
@@ -119,19 +121,19 @@ Then, SSH into a node `aks-nodepool1-18558189-0` with options like:
 - identity:`~/.ssh/id_rsa_k8s`
 - pubkey:`~/.ssh/id_rsa_k8s.pub`)
 ```sh
-$ kubectl ssh aks-nodepool1-18558189-0 \
+$ kubectl ssh-jump aks-nodepool1-18558189-0 \
   -u azureuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub
 ```
 
 As explained in usage secion, `username`, `identity`, `pubkey` options are cached, therefore you can omit these options afterward.
 
 ```sh
-$ kubectl ssh aks-nodepool1-18558189-0
+$ kubectl ssh-jump aks-nodepool1-18558189-0
 ```
 
 You can pass the commands to run in the destination node like this (Suppose that `username`, `identity`, `pubkey` options are cached):
 ```sh
-echo "uname -a" | kubectl ssh aks-nodepool1-18558189-0
+echo "uname -a" | kubectl ssh-jump aks-nodepool1-18558189-0
 
 (Output)
 Linux aks-nodepool1-18558189-0 4.15.0-1035-azure #36~16.04.1-Ubuntu SMP Fri Nov 30 15:25:49 UTC 2018 x86_64 x86_64 x86_64 GNU/Linux
@@ -140,14 +142,14 @@ Linux aks-nodepool1-18558189-0 4.15.0-1035-azure #36~16.04.1-Ubuntu SMP Fri Nov 
 
 You can clean up sshjump pod at the end of the command with `--cleanup-jump` option, otherwise, the sshjump pod stay running by default.
 ```sh
-$ kubectl ssh aks-nodepool1-18558189-0 \
+$ kubectl ssh-jump aks-nodepool1-18558189-0 \
   -u azureuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub \
   --cleanup-jump
 ```
 
 You can clean up ssh-agent at the end of the command with `--cleanup-agent` option, otherwise, the ssh-agent process stay running once it's started.
 ```sh
-$ kubectl ssh aks-nodepool1-18558189-0 \
+$ kubectl ssh-jump aks-nodepool1-18558189-0 \
   -u azureuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub \
   --cleanup-agent
 ```
@@ -159,7 +161,7 @@ $ eval `ssh-agent`
 # Add an arbitrary private key, give the path of the key file as an argument to ssh-add
 $ ssh-add ~/.ssh/id_rsa_k8s
 # Then, run the plugin with --skip-agent
-$ kubectl ssh aks-nodepool1-18558189-0 \
+$ kubectl ssh-jump aks-nodepool1-18558189-0 \
   -u azureuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub \
   --skip-agent
 
@@ -174,4 +176,4 @@ $ ssh-agent -k
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/yokawasa/kubectl-plugin-ssh-jumphost
+Bug reports and pull requests are welcome on GitHub at https://github.com/yokawasa/kubectl-plugin-ssh-jump
