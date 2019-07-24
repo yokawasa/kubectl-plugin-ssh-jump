@@ -93,6 +93,7 @@ Options:
   -u, --user <sshuser>            SSH User name
   -i, --identity <identity_file>  Identity key file
   -p, --pubkey <pub_key_file>     Public key file
+  -P, --port <port>               SSH port for target node SSH server (default:22)
   --skip-agent                    Skip automatically starting SSH agent and adding
                                   SSH Identity key into the agent before SSH login
                                   (=> You need to manage SSH agent by yourself)
@@ -105,7 +106,7 @@ Options:
 ```
 
 #### Option parameters Cache
-`username`, `identity`, `pubkey` options are cached, therefore you can omit these options afterward. The options are stored in a file named `$HOME/.kube/kubectlssh/options`
+`username`, `identity`, `pubkey`, `port` options are cached, therefore you can omit these options afterward. The options are stored in a file named `$HOME/.kube/kubectlssh/options`
 ```
 $ cat $HOME/.kube/kubectlssh/options
 sshuser=azureuser
@@ -135,6 +136,7 @@ Options:
   -u, --user <sshuser>            SSH User name
   -i, --identity <identity_file>  Identity key file
   -p, --pubkey <pub_key_file>     Public key file
+  -P, --port <port>               SSH port for target node SSH server (default:22)
   --skip-agent                    Skip automatically starting SSH agent and adding
                                   SSH Identity key into the agent before SSH login
                                   (=> You need to manage SSH agent by yourself)

@@ -13,7 +13,7 @@ SSH_AGENT_PID_FILE="${PLUGIN_DIR}/sshagent-pid"
 
 help(){
   echo "Usage: "
-  echo "  kubectl ssh <dest_node> [options]"
+  echo "  kubectl ssh-jump <dest_node> [options]"
   echo ""
   options
 }
@@ -25,6 +25,7 @@ Options:
   -u, --user <sshuser>            SSH User name
   -i, --identity <identity_file>  Identity key file
   -p, --pubkey <pub_key_file>     Public key file
+  -P, --port <port>               SSH port for target node SSH server (default:22)
   --skip-agent                    Skip automatically starting SSH agent and adding 
                                   SSH Identity key into the agent before SSH login
                                   (=> You need to manage SSH agent by yourself)
@@ -50,11 +51,13 @@ write_options(){
   local sshuser="$1"
   local identity="$2"
   local pubkey="$3"
+  local port="$4"
 
   cat << EOF > ${PLUGIN_SSH_OPTIONS_FILE}
 sshuser=${sshuser}
 identity=${identity}
 pubkey=${pubkey}
+port=${port}
 EOF
 }
 
@@ -108,6 +111,7 @@ run_ssh_node(){
   local sshuser="$2"
   local identity="$3"
   local pubkey="$4"
+  local port="$5"
 
   # Install an SSH Server if not yet installed
   r=$(kubectl get pod sshjump 2>/dev/null | tail -1 | awk '{print $1}')
@@ -134,7 +138,10 @@ run_ssh_node(){
   cat ${pubkey} | kubectl exec -i sshjump -- /bin/bash -c "cat >> /root/.ssh/authorized_keys"
 
   # Using the SSH Server as a jumphost (via port-forward proxy), ssh into the desired Node
-  ssh -i ${identity} -J root@127.0.0.1:2222 ${sshuser}@${destnode}
+  ssh -i ${identity} -p ${port} ${sshuser}@${destnode} \
+    -o "ProxyCommand ssh root@127.0.0.1 -p 2222 -i ${identity} -o \"StrictHostKeyChecking=no\" \"nc %h %p\"" \
+    -o "StrictHostKeyChecking=no"
+
   # Stop port-forward
   kill -3 ${pid_port_forward} 2>/dev/null
 }
@@ -188,6 +195,9 @@ plugin_main(){
         "p" | "pubkey" )
           c_pubkey="${arg}"
           ;;
+        "P" | "port" )
+          c_port="${arg}"
+          ;;
         * )
           help >&2
           exit 1
@@ -238,15 +248,22 @@ plugin_main(){
     echo "using: pubkey=$pubkey"
     c_pubkey="${pubkey}"
   fi
+  if [ ! -n "${c_port}" ]; then
+    if [ ! -n "${port}" ]; then
+      port="22"    # default: 22
+    fi
+    echo "using: port=$port"
+    c_port="${port}"
+  fi
 
   # Caching current ssh options
-  write_options ${c_sshuser} ${c_identity} ${c_pubkey}
+  write_options ${c_sshuser} ${c_identity} ${c_pubkey} ${c_port}
 
   if [ "${skip_agent}" = "no" ]; then
     check_and_start_agent ${c_identity}
   fi
   # SSH Logging into desitnation node via Jump host
-  run_ssh_node ${destnode} ${c_sshuser} ${c_identity} ${c_pubkey}
+  run_ssh_node ${destnode} ${c_sshuser} ${c_identity} ${c_pubkey} ${c_port}
 
   # Cleaning up resources if needed
   if [ "${cleanup_jump}" = "yes" ]; then
