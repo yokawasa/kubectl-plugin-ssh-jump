@@ -112,6 +112,7 @@ $ cat $HOME/.kube/kubectlssh/options
 sshuser=azureuser
 identity=/Users/yokawasa/.ssh/id_rsa_k8s
 pubkey=/Users/yokawasa/.ssh/id_rsa_k8s.pub
+port=22
 ```
 
 #### SSH Agent (ssh-agent)
