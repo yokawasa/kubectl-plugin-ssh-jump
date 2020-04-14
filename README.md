@@ -94,11 +94,12 @@ Options:
   -i, --identity <identity_file>  Identity key file
   -p, --pubkey <pub_key_file>     Public key file
   -P, --port <port>               SSH port for target node SSH server (default:22)
+  -a, --args <args>               Args to exec in ssh session
   --skip-agent                    Skip automatically starting SSH agent and adding
                                   SSH Identity key into the agent before SSH login
                                   (=> You need to manage SSH agent by yourself)
   --cleanup-agent                 Clearning up SSH agent at the end
-                                  The agent is NOT cleaned up in case that 
+                                  The agent is NOT cleaned up in case that
                                   --skip-agent option is given
   --cleanup-jump                  Clearning up sshjump pod at the end
                                   Default: Skip cleaning up sshjump pod
@@ -138,6 +139,7 @@ Options:
   -i, --identity <identity_file>  Identity key file
   -p, --pubkey <pub_key_file>     Public key file
   -P, --port <port>               SSH port for target node SSH server (default:22)
+  -a, --args <args>               Args to exec in ssh session
   --skip-agent                    Skip automatically starting SSH agent and adding
                                   SSH Identity key into the agent before SSH login
                                   (=> You need to manage SSH agent by yourself)
@@ -181,6 +183,13 @@ echo "uname -a" | kubectl ssh-jump aks-nodepool1-18558189-0
 Linux aks-nodepool1-18558189-0 4.15.0-1035-azure #36~16.04.1-Ubuntu SMP Fri Nov 30 15:25:49 UTC 2018 x86_64 x86_64 x86_64 GNU/Linux
 ```
 
+You can pass commands by `args`
+``` sh
+kubectl ssh-jump aks-nodepool1-18558189-0 --args "uname -a"
+
+(Output)
+Linux aks-nodepool1-18558189-0 4.15.0-1035-azure #36~16.04.1-Ubuntu SMP Fri Nov 30 15:25:49 UTC 2018 x86_64 x86_64 x86_64 GNU/Linux
+```
 
 You can clean up sshjump pod at the end of the command with `--cleanup-jump` option, otherwise, the sshjump pod stay running by default.
 ```sh
