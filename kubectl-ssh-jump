@@ -26,6 +26,7 @@ Options:
   -i, --identity <identity_file>  Identity key file
   -p, --pubkey <pub_key_file>     Public key file
   -P, --port <port>               SSH port for target node SSH server (default:22)
+  -a, --args <args>		  Args to exec in ssh session
   --skip-agent                    Skip automatically starting SSH agent and adding 
                                   SSH Identity key into the agent before SSH login
                                   (=> You need to manage SSH agent by yourself)
@@ -112,9 +113,10 @@ run_ssh_node(){
   local identity="$3"
   local pubkey="$4"
   local port="$5"
+  local sshargs="$6"
 
   # Install an SSH Server if not yet installed
-  r=$(kubectl get pod sshjump 2>/dev/null | tail -1 | awk '{print $1}')
+  r=$(kubectl get pod sshjump 2>/dev/null | tail -1 | awk '{print $1}') # 
   if [ "${r}" != "sshjump" ];then
     echo "Creating SSH jump host (Pod)..."
     kubectl run sshjump --image=corbinu/ssh-server --port=22 --restart=Never
@@ -140,71 +142,61 @@ run_ssh_node(){
   # Using the SSH Server as a jumphost (via port-forward proxy), ssh into the desired Node
   ssh -i ${identity} -p ${port} ${sshuser}@${destnode} \
     -o "ProxyCommand ssh root@127.0.0.1 -p 2222 -i ${identity} -o \"StrictHostKeyChecking=no\" \"nc %h %p\"" \
-    -o "StrictHostKeyChecking=no"
+    -o "StrictHostKeyChecking=no" $sshargs
 
   # Stop port-forward
   kill -3 ${pid_port_forward} 2>/dev/null
 }
 
-plugin_main(){
-  skip_agent="no"
-  cleanup_jump="no"
-  cleanup_agent="no"
-
-  for arg in "$@"; do
-    option=""
-    if [ "${arg:0:1}" = "-" ]; then
-      if [ "${arg:1:1}" = "-" ]; then
-        option="${arg:2}"
-        prevopt="${arg:2}"
-      else
-        index=1
-        while o="${arg:$index:1}"; do
-          [ -n "$o" ] || break
-          option="$o"
-          prevopt="$o"
-          let index+=1
-        done
-      fi
-      case "${option}" in
-      "h" | "help" )
-        help
-        exit 0
-        ;;
-      "cleanup-jump" )
-        cleanup_jump="yes"
-        ;;
-      "cleanup-agent" )
-        cleanup_agent="yes"
-        ;;
-      "skip-agent" )
-        skip_agent="yes"
-        ;;
-      esac
-    else
-      if [ "${prevopt}" = "" ]; then
-        destnode="${arg}"
-      else
-        case "${prevopt}" in
-        "u" | "user" )
-          c_sshuser="${arg}"
-          ;;
-        "i" | "identity" )
-          c_identity="${arg}"
-          ;;
-        "p" | "pubkey" )
-          c_pubkey="${arg}"
-          ;;
-        "P" | "port" )
-          c_port="${arg}"
-          ;;
-        * )
-          help >&2
-          exit 1
-          ;;
-        esac
-      fi 
-    fi 
+plugin_main() {
+  skip_agent=no
+  cleanup_jump=no
+  cleanup_agent=no
+  while [ $# -gt 0 ] ; do
+    nSkip=1
+    case $1 in
+      "-h" | "--help")
+	help
+	exit 0
+	;;
+      "--cleanup-jump")
+	cleanup_jump=yes
+	;;
+      "--cleanup-agent")
+	cleanup_agent=yes
+	;;
+      "--skip-agent")
+	skip_agent=yes
+	;;
+      "-u" | "--user" )
+	c_sshuser=$2
+	nSkip=2
+	;;
+      "-i" | "--identity" )
+	c_identity=$2
+	nSkip=2
+	;;
+      "-p" | "--pubkey" )
+	c_pubkey=$2
+	nSkip=2
+	;;
+      "-P" | "--port")
+	c_port=$2
+	nSkip=2
+	;;
+      "-a" | "--args" )
+	sshargs="$2"
+	nSkip=2
+	;;
+      [a-z]*)
+	destnode=$1
+	;;
+      *)
+	help >&2
+	exit 1
+	;;
+    esac
+    shift $nSkip
   done
 
   if [[ "$(type kubectl &>/dev/null; echo $?)" -eq 1 ]]; then
@@ -256,6 +248,10 @@ plugin_main(){
     c_port="${port}"
   fi
 
+  if [ "${sshargs}" != "" ]; then
+    echo "using: args=$sshargs"
+  fi
+
   # Caching current ssh options
   write_options ${c_sshuser} ${c_identity} ${c_pubkey} ${c_port}
 
@@ -263,7 +259,7 @@ plugin_main(){
     check_and_start_agent ${c_identity}
   fi
   # SSH Logging into desitnation node via Jump host
-  run_ssh_node ${destnode} ${c_sshuser} ${c_identity} ${c_pubkey} ${c_port}
+  run_ssh_node ${destnode} ${c_sshuser} ${c_identity} ${c_pubkey} ${c_port} "${sshargs}"
 
   # Cleaning up resources if needed
   if [ "${cleanup_jump}" = "yes" ]; then
