@@ -26,7 +26,7 @@ Options:
   -i, --identity <identity_file>  Identity key file
   -p, --pubkey <pub_key_file>     Public key file
   -P, --port <port>               SSH port for target node SSH server (default:22)
-  -a, --args <args>		  Args to exec in ssh session
+  -a, --args <args>               Args to exec in ssh session
   --skip-agent                    Skip automatically starting SSH agent and adding 
                                   SSH Identity key into the agent before SSH login
                                   (=> You need to manage SSH agent by yourself)
@@ -57,7 +57,8 @@ write_options(){
   cat << EOF > ${PLUGIN_SSH_OPTIONS_FILE}
 sshuser=${sshuser}
 identity=${identity}
-pubkey=${pubkey}
+
+ubkey=${pubkey}
 port=${port}
 EOF
 }
@@ -186,7 +187,7 @@ plugin_main() {
 	;;
       "-a" | "--args" )
 	sshargs="$2"
-	nSkip=2
+	nSkRip=2
 	;;
       [a-z]*)
 	destnode=$1
