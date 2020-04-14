@@ -58,7 +58,7 @@ write_options(){
 sshuser=${sshuser}
 identity=${identity}
 
-ubkey=${pubkey}
+pubkey=${pubkey}
 port=${port}
 EOF
 }
