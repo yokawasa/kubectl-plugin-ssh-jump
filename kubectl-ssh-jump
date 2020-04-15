@@ -187,7 +187,7 @@ plugin_main() {
 	;;
       "-a" | "--args" )
 	sshargs="$2"
-	nSkRip=2
+	nSkip=2
 	;;
       [a-z]*)
 	destnode=$1
