@@ -24,7 +24,7 @@ This plugin needs the following programs:
 ## Installation
 
 ### Install through krew
-This is a way to install kubectl-ssh-jump through [krew](https://github.com/GoogleContainerTools/krew). After installing krew by following [this](https://github.com/GoogleContainerTools/krew#installation), you can install kubectl-ssh-jump like this:
+This is a way to install kubectl-ssh-jump through [krew](https://krew.sigs.k8s.io/). After installing krew by following [this](https://krew.sigs.k8s.io/docs/user-guide/setup/install/), you can install kubectl-ssh-jump like this:
 
 ```sh
 $ kubectl krew install ssh-jump
