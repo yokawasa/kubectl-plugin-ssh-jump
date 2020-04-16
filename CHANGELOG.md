@@ -2,6 +2,9 @@
 
 All notable changes to the "kubectl-plugin-ssh-jump" extension will be documented in this file.
 
+## 0.3.1
+- fixed typo: missing char ( [PR#3](https://github.com/yokawasa/kubectl-plugin-ssh-jump/pull/3), thanks to @iuryfukuda )
+
 ## 0.3.0
 - Added Args param to exec in ssh session ( [PR#2](https://github.com/yokawasa/kubectl-plugin-ssh-jump/pull/2), thanks to @iuryfukuda )
 
