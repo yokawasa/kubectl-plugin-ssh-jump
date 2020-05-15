@@ -24,7 +24,7 @@ This plugin needs the following programs:
 ## Installation
 
 ### Install through krew
-This is a way to install kubectl-ssh-jump through [krew](https://github.com/GoogleContainerTools/krew). After installing krew by following [this](https://github.com/GoogleContainerTools/krew#installation), you can install kubectl-ssh-jump like this:
+This is a way to install kubectl-ssh-jump through [krew](https://krew.sigs.k8s.io/). After installing krew by following [this](https://krew.sigs.k8s.io/docs/user-guide/setup/install/), you can install kubectl-ssh-jump like this:
 
 ```sh
 $ kubectl krew install ssh-jump
@@ -89,7 +89,10 @@ Usage:
   kubectl ssh-jump <dest_node> [options]
 
 Options:
-  <dest_node>                     Destination node IP
+  <dest_node>                     Destination node name or IP address
+                                  dest_node must start from the following letters:
+                                  ASCII letters 'a' through 'z' or 'A' through 'Z',
+                                  the digits '0' through '9', or hyphen ('-'
   -u, --user <sshuser>            SSH User name
   -i, --identity <identity_file>  Identity key file
   -p, --pubkey <pub_key_file>     Public key file
@@ -134,7 +137,10 @@ Usage:
   kubectl ssh-jump <dest_node> [options]
 
 Options:
-  <dest_node>                     Destination node IP
+  <dest_node>                     Destination node name or IP address
+                                  dest_node must start from the following letters:
+                                  ASCII letters 'a' through 'z' or 'A' through 'Z',
+                                  the digits '0' through '9', or hyphen ('-')
   -u, --user <sshuser>            SSH User name
   -i, --identity <identity_file>  Identity key file
   -p, --pubkey <pub_key_file>     Public key file
@@ -154,10 +160,11 @@ Example:
    ....
 
 List of destination node...
-Hostname
-aks-nodepool1-18558189-0
-aks-nodepool1-18558189-1
-aks-nodepool1-18558189-2
+Hostname                    Internal-IP
+aks-nodepool1-18558189-0    10.240.0.4
+aks-nodepool1-18558189-1    10.240.0.5
+aks-nodepool1-18558189-2    10.240.0.6
+
 ```
 
 Then, SSH into a node `aks-nodepool1-18558189-0` with options like:
@@ -168,6 +175,7 @@ Then, SSH into a node `aks-nodepool1-18558189-0` with options like:
 $ kubectl ssh-jump aks-nodepool1-18558189-0 \
   -u azureuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub
 ```
+> [NOTE] you can try SSH into a node using node IP address (`Internal-IP`) instead of `Hostname`
 
 As explained in usage secion, `username`, `identity`, `pubkey` options are cached, therefore you can omit these options afterward.
 

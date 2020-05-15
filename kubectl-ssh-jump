@@ -21,7 +21,10 @@ help(){
 options(){
   cat <<"EOF"
 Options:
-  <dest_node>                     Destination node IP
+  <dest_node>                     Destination node name or IP address
+                                  dest_node must start from the following letters:
+                                  ASCII letters 'a' through 'z' or 'A' through 'Z',
+                                  the digits '0' through '9', or hyphen ('-')
   -u, --user <sshuser>            SSH User name
   -i, --identity <identity_file>  Identity key file
   -p, --pubkey <pub_key_file>     Public key file
@@ -65,7 +68,7 @@ EOF
 
 get_node_list(){
   echo "List of destination node..."
-  kubectl get no -o custom-columns=Hostname:.metadata.name
+  kubectl get no -o custom-columns=Hostname:.metadata.name,Internal-IP:'{.status.addresses[?(@.type=="InternalIP")].address}'
   echo ""
 }
 
@@ -138,7 +141,7 @@ run_ssh_node(){
   kubectl port-forward sshjump 2222:22 2>/dev/null &
   pid_port_forward=$!
   # Inject public SSH key to sshjump
-  cat ${pubkey} | kubectl exec -i sshjump -- /bin/bash -c "cat >> /root/.ssh/authorized_keys"
+  cat ${pubkey} | kubectl exec -i sshjump -- /bin/bash -c "cat > /root/.ssh/authorized_keys"
 
   # Using the SSH Server as a jumphost (via port-forward proxy), ssh into the desired Node
   ssh -i ${identity} -p ${port} ${sshuser}@${destnode} \
@@ -189,7 +192,7 @@ plugin_main() {
 	sshargs="$2"
 	nSkip=2
 	;;
-      [a-z]*)
+      [0-9a-zA-Z-]*)
 	destnode=$1
 	;;
       *)
