@@ -26,7 +26,7 @@ Options:
                                   ASCII letters 'a' through 'z' or 'A' through 'Z',
                                   the digits '0' through '9', or hyphen ('-')
   -u, --user <sshuser>            SSH User name
-  -i, --identity <identity_file>  Identity key file
+  -i, --identity <identity_file>  Identity key file, or PEM(Privacy Enhanced Mail)
   -p, --pubkey <pub_key_file>     Public key file
   -P, --port <port>               SSH port for target node SSH server (default:22)
   -a, --args <args>               Args to exec in ssh session
@@ -41,7 +41,12 @@ Options:
   -h, --help                      Show this message
 
 Example:
-   ....
+  Scenario1 - You have private & public SSH key on your side
+  $ kubectl ssh-jump -u myuser -i ~/.ssh/id_rsa -p ~/.ssh/id_rsa.pub hostname
+
+  Scenario2 - You have .pem file but you don't have private key on your side
+  $ kubectl ssh-jump -u ec2-user -i ~/.ssh/mykey.pem hostname
+
 EOF
 }
 
@@ -137,15 +142,32 @@ run_ssh_node(){
     done
   fi
 
+  local identity_sshjump=${identity}
+  local pubkey_sshjump=${pubkey}
+  if [ ! -f "${pubkey_sshjump}" ]; then
+    # Generate temp private/public key to ssh to the sshjump if the pubkey isn't given
+    identity_sshjump=${PLUGIN_DIR}/id_rsa_sshjump
+    pubkey_sshjump=${PLUGIN_DIR}/id_rsa_sshjump.pub
+    if [ ! -f "${pubkey_sshjump}" ]; then
+      echo "Generating nopass SSH pri/pub key to ssh to the sshjump ..."
+      ssh-keygen -t rsa -f ${identity_sshjump} -N '' > /dev/null
+    fi
+  fi
+
   # Setup portforward
   kubectl port-forward sshjump 2222:22 2>/dev/null &
   pid_port_forward=$!
+
+  # Wait a bit for the port forwarding to get ready for connection handling for 2222
+  sleep 2
+
   # Inject public SSH key to sshjump
-  cat ${pubkey} | kubectl exec -i sshjump -- /bin/bash -c "cat > /root/.ssh/authorized_keys"
+  cat ${pubkey_sshjump} | \
+    kubectl exec -i sshjump -- /bin/bash -c "cat > /root/.ssh/authorized_keys"
 
   # Using the SSH Server as a jumphost (via port-forward proxy), ssh into the desired Node
   ssh -i ${identity} -p ${port} ${sshuser}@${destnode} \
-    -o "ProxyCommand ssh root@127.0.0.1 -p 2222 -i ${identity} -o \"StrictHostKeyChecking=no\" \"nc %h %p\"" \
+    -o "ProxyCommand ssh root@127.0.0.1 -p 2222 -i ${identity_sshjump} -o \"StrictHostKeyChecking=no\" \"nc %h %p\"" \
     -o "StrictHostKeyChecking=no" $sshargs
 
   # Stop port-forward
@@ -223,47 +245,52 @@ plugin_main() {
 
   if [ ! -n "${c_sshuser}" ]; then
     if [ ! -n "${sshuser}" ]; then
-      c_sshuser="$USER"  # default: Current executing user
+      c_sshuser="${USER}"  # default: Current executing user
     fi
-    echo "using: sshuser=$sshuser"
+    echo "using: sshuser=${sshuser}"
     c_sshuser="${sshuser}"
   fi
   if [ ! -f "${c_identity}" ]; then
     if [ ! -f "${identity}" ]; then
+      echo "Error: identity file is required" >&2
       help >&2
       exit 1
     fi
-    echo "using: identity=$identity"
+    echo "using: identity=${identity}"
     c_identity="${identity}"
   fi
   if [ ! -f "${c_pubkey}" ]; then
-    if [ ! -f "${pubkey}" ]; then
-      help >&2
-      exit 1
+    # From v0.4.0 pubkey file is optional to support PEM scenario
+    # where you don't have public key on your side
+    #if [ ! -n "${pubkey}" ]; then
+    #  help >&2
+    #  exit 1
+    #fi
+    if [ -f "${pubkey}" ]; then
+      echo "using: pubkey=${pubkey}"
+      c_pubkey="${pubkey}"
     fi
-    echo "using: pubkey=$pubkey"
-    c_pubkey="${pubkey}"
   fi
   if [ ! -n "${c_port}" ]; then
     if [ ! -n "${port}" ]; then
       port="22"    # default: 22
     fi
-    echo "using: port=$port"
+    echo "using: port=${port}"
     c_port="${port}"
   fi
 
   if [ "${sshargs}" != "" ]; then
-    echo "using: args=$sshargs"
+    echo "using: args=${sshargs}"
   fi
 
   # Caching current ssh options
-  write_options ${c_sshuser} ${c_identity} ${c_pubkey} ${c_port}
+  write_options "${c_sshuser}" "${c_identity}" "${c_pubkey}" "${c_port}"
 
   if [ "${skip_agent}" = "no" ]; then
     check_and_start_agent ${c_identity}
   fi
   # SSH Logging into desitnation node via Jump host
-  run_ssh_node ${destnode} ${c_sshuser} ${c_identity} ${c_pubkey} ${c_port} "${sshargs}"
+  run_ssh_node "${destnode}" "${c_sshuser}" "${c_identity}" "${c_pubkey}" "${c_port}" "${sshargs}"
 
   # Cleaning up resources if needed
   if [ "${cleanup_jump}" = "yes" ]; then

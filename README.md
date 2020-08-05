@@ -22,6 +22,7 @@ Here is an scenario where you want to connect to Kubernetes node, but you have t
 This plugin needs the following programs:
 * ssh(1)	
 * ssh-agent(1)
+* ssh-keygen(1)
 
 ## Installation
 
@@ -96,7 +97,7 @@ Options:
                                   ASCII letters 'a' through 'z' or 'A' through 'Z',
                                   the digits '0' through '9', or hyphen ('-'
   -u, --user <sshuser>            SSH User name
-  -i, --identity <identity_file>  Identity key file
+  -i, --identity <identity_file>  Identity key file, or PEM(Privacy Enhanced Mail)
   -p, --pubkey <pub_key_file>     Public key file
   -P, --port <port>               SSH port for target node SSH server (default:22)
   -a, --args <args>               Args to exec in ssh session
@@ -109,13 +110,22 @@ Options:
   --cleanup-jump                  Clearning up sshjump pod at the end
                                   Default: Skip cleaning up sshjump pod
   -h, --help                      Show this message
+
+Example:
+  Scenario1 - You have private & public SSH key on your side
+  $ kubectl ssh-jump -u myuser -i ~/.ssh/id_rsa -p ~/.ssh/id_rsa.pub hostname
+
+  Scenario2 - You have .pem file but you don't have private key on your side
+  $ kubectl ssh-jump -u ec2-user -i ~/.ssh/mykey.pem hostname
 ```
 
 #### Option parameters Cache
+
 `username`, `identity`, `pubkey`, `port` options are cached, therefore you can omit these options afterward. The options are stored in a file named `$HOME/.kube/kubectlssh/options`
-```
+
+```sh
 $ cat $HOME/.kube/kubectlssh/options
-sshuser=azureuser
+sshuser=myuser
 identity=/Users/yokawasa/.ssh/id_rsa_k8s
 pubkey=/Users/yokawasa/.ssh/id_rsa_k8s.pub
 port=22
@@ -132,7 +142,7 @@ In addtion, add `--skip-agent` option if you want to skip automatic starting `ss
 
 Show all node list. Simply executing `kubectl ssh-jump` gives you the list of destination nodes as well as command usage
 
-```sh 
+```sh
 $ kubectl ssh-jump
 
 Usage:
@@ -144,7 +154,7 @@ Options:
                                   ASCII letters 'a' through 'z' or 'A' through 'Z',
                                   the digits '0' through '9', or hyphen ('-')
   -u, --user <sshuser>            SSH User name
-  -i, --identity <identity_file>  Identity key file
+  -i, --identity <identity_file>  Identity key file, or PEM(Privacy Enhanced Mail)
   -p, --pubkey <pub_key_file>     Public key file
   -P, --port <port>               SSH port for target node SSH server (default:22)
   -a, --args <args>               Args to exec in ssh session
@@ -159,27 +169,35 @@ Options:
   -h, --help                      Show this message
 
 Example:
-   ....
+  Scenario1 - You have private & public SSH key on your side
+  $ kubectl ssh-jump -u myuser -i ~/.ssh/id_rsa -p ~/.ssh/id_rsa.pub hostname
+
+  Scenario2 - You have .pem file but you don't have private key on your side
+  $ kubectl ssh-jump -u ec2-user -i ~/.ssh/mykey.pem hostname
 
 List of destination node...
 Hostname                    Internal-IP
 aks-nodepool1-18558189-0    10.240.0.4
-aks-nodepool1-18558189-1    10.240.0.5
-aks-nodepool1-18558189-2    10.240.0.6
+...
 
 ```
 
-Then, SSH into a node `aks-nodepool1-18558189-0` with options like:
-- usernaem: `azureuser`
+#### Scenario1 - You have private & public SSH key on your side
+
+Suppose you have private & public SSH key on your side and you want to SSH to a node named `aks-nodepool1-18558189-0`, execute the plugin with options like this:
+
+- usernaem: `myuser`
 - identity:`~/.ssh/id_rsa_k8s`
 - pubkey:`~/.ssh/id_rsa_k8s.pub`)
+
 ```sh
 $ kubectl ssh-jump aks-nodepool1-18558189-0 \
-  -u azureuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub
+  -u myuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub
 ```
+
 > [NOTE] you can try SSH into a node using node IP address (`Internal-IP`) instead of `Hostname`
 
-As explained in usage secion, `username`, `identity`, `pubkey` options are cached, therefore you can omit these options afterward.
+As explained in usage secion, `username`, `identity`, `pubkey` options will be cached, therefore you can omit these options afterward.
 
 ```sh
 $ kubectl ssh-jump aks-nodepool1-18558189-0
@@ -202,18 +220,21 @@ Linux aks-nodepool1-18558189-0 4.15.0-1035-azure #36~16.04.1-Ubuntu SMP Fri Nov 
 ```
 
 You can clean up sshjump pod at the end of the command with `--cleanup-jump` option, otherwise, the sshjump pod stay running by default.
+
 ```sh
 $ kubectl ssh-jump aks-nodepool1-18558189-0 \
-  -u azureuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub \
+  -u myuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub \
   --cleanup-jump
 ```
 
 You can clean up ssh-agent at the end of the command with `--cleanup-agent` option, otherwise, the ssh-agent process stay running once it's started.
+
 ```sh
 $ kubectl ssh-jump aks-nodepool1-18558189-0 \
-  -u azureuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub \
+  -u myuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub \
   --cleanup-agent
 ```
+
 You can skip starting `ssh-agent` by giving `--skip-agent`. This is actually a case where you already have ssh-agent managed. Or you can start new ssh-agent and add an identity key to the ssh-agent like this:
 
 ```sh
@@ -223,14 +244,28 @@ $ eval `ssh-agent`
 $ ssh-add ~/.ssh/id_rsa_k8s
 # Then, run the plugin with --skip-agent
 $ kubectl ssh-jump aks-nodepool1-18558189-0 \
-  -u azureuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub \
+  -u myuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub \
   --skip-agent
 
 # At the end, run this if you want to kill the current agent
 $ ssh-agent -k
 ```
 
+#### Scenario2 - You have .pem file but you don't have private key on your side
+
+From v0.4.0, the plugin supports PEM (Privacy Enhanced Mail) scenario where you create key-pair but you only have .pem / private key (downloaded from AWS, for example) and you don't have the public key on your side.
+
+Suppose you've already downloaded a pem file and you want to ssh to your EKS worker node (EC2) named `ip-10-173-62-96.ap-northeast-1.compute.internal` using the pem, execute the plugin with options like this:
+
+- usernaem: `ec2-user`
+- identity: `~/.ssh/mykey.pem`
+
+```sh
+$ kubectl ssh-jump -u ec2-user -i ~/.ssh/mykey.pem ip-10-173-62-96.ap-northeast-1.compute.internal
+```
+
 ## Useful Links
+
 - [Extend kubectl with plugins](https://kubernetes.io/docs/tasks/extend-kubectl/kubectl-plugins/)
 - [Write your own kubectl subcommands](https://ahmet.im/blog/kubectl-plugins/)
 - [SSH-AGENT - SINGLE SIGN-ON USING SSH](https://www.ssh.com/ssh/agent)
