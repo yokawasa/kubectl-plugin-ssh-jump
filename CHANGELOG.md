@@ -2,6 +2,10 @@
 
 All notable changes to the "kubectl-plugin-ssh-jump" extension will be documented in this file.
 
+## 0.4.0
+
+- Support PEM (Privacy Enhanced Mail) scenario where you create key-pair but you only have .pem / private key (downloaded from AWS, for example) and you don't have the public key on your side.
+
 ## 0.3.2
 
 - Changed a validation for destination name to support valid characters of hostname for SSH destination node that can start from ASCII letters 'a' through 'z' (in a case-insensitive manner), the digits '0' through '9', or the hyphen ('-'). Ref [RFC952](https://tools.ietf.org/html/rfc952) for valid characters of hostname.
@@ -23,4 +27,5 @@ All notable changes to the "kubectl-plugin-ssh-jump" extension will be documente
 
 
 ## 0.1.0
+
 - Initial release (alpha release)
