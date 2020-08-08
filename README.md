@@ -32,7 +32,7 @@ Here is an scenario where you want to connect to Kubernetes node, but you have t
             - [SSH Agent (ssh-agent)](#ssh-agent-ssh-agent)
         - [Examples](#examples)
             - [Scenario1 - You have private & public SSH key on your side](#scenario1---you-have-private--public-ssh-key-on-your-side)
-            - [Scenario2 - You have .pem file but you don't have private key on your side](#scenario2---you-have-pem-file-but-you-dont-have-private-key-on-your-side)
+            - [Scenario2 - You have .pem file but you don't have public key on your side](#scenario2---you-have-pem-file-but-you-dont-have-public-key-on-your-side)
     - [Useful Links](#useful-links)
     - [Contributing](#contributing)
 
@@ -136,7 +136,7 @@ Example:
   Scenario1 - You have private & public SSH key on your side
   $ kubectl ssh-jump -u myuser -i ~/.ssh/id_rsa -p ~/.ssh/id_rsa.pub hostname
 
-  Scenario2 - You have .pem file but you don't have private key on your side
+  Scenario2 - You have .pem file but you don't have public key on your side
   $ kubectl ssh-jump -u ec2-user -i ~/.ssh/mykey.pem hostname
 ```
 
@@ -193,7 +193,7 @@ Example:
   Scenario1 - You have private & public SSH key on your side
   $ kubectl ssh-jump -u myuser -i ~/.ssh/id_rsa -p ~/.ssh/id_rsa.pub hostname
 
-  Scenario2 - You have .pem file but you don't have private key on your side
+  Scenario2 - You have .pem file but you don't have public key on your side
   $ kubectl ssh-jump -u ec2-user -i ~/.ssh/mykey.pem hostname
 
 List of destination node...
