@@ -44,7 +44,7 @@ Example:
   Scenario1 - You have private & public SSH key on your side
   $ kubectl ssh-jump -u myuser -i ~/.ssh/id_rsa -p ~/.ssh/id_rsa.pub hostname
 
-  Scenario2 - You have .pem file but you don't have private key on your side
+  Scenario2 - You have .pem file but you don't have public key on your side
   $ kubectl ssh-jump -u ec2-user -i ~/.ssh/mykey.pem hostname
 
 EOF
