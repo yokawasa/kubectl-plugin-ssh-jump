@@ -18,6 +18,27 @@ Here is an scenario where you want to connect to Kubernetes node, but you have t
 >   - You still can run the plugin directly with `kubectl-ssh-jump ...`
 
 
+**Table of Content**
+<!-- TOC -->
+
+- [kubectl-plugin-ssh-jump](#kubectl-plugin-ssh-jump)
+    - [Pre-requistes](#pre-requistes)
+    - [Installation](#installation)
+        - [Install through krew](#install-through-krew)
+        - [Manual Installation](#manual-installation)
+    - [How to use](#how-to-use)
+        - [Usage](#usage)
+            - [Option parameters Cache](#option-parameters-cache)
+            - [SSH Agent (ssh-agent)](#ssh-agent-ssh-agent)
+        - [Examples](#examples)
+            - [Scenario1 - You have private & public SSH key on your side](#scenario1---you-have-private--public-ssh-key-on-your-side)
+            - [Scenario2 - You have .pem file but you don't have private key on your side](#scenario2---you-have-pem-file-but-you-dont-have-private-key-on-your-side)
+    - [Useful Links](#useful-links)
+    - [Contributing](#contributing)
+
+<!-- /TOC -->
+
+
 ## Pre-requistes
 This plugin needs the following programs:
 * ssh(1)	
