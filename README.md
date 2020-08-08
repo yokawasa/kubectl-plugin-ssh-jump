@@ -251,7 +251,7 @@ $ kubectl ssh-jump aks-nodepool1-18558189-0 \
 $ ssh-agent -k
 ```
 
-#### Scenario2 - You have .pem file but you don't have private key on your side
+#### Scenario2 - You have .pem file but you don't have public key on your side
 
 From v0.4.0, the plugin supports PEM (Privacy Enhanced Mail) scenario where you create key-pair but you only have .pem / private key (downloaded from AWS, for example) and you don't have the public key on your side.
 
