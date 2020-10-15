@@ -128,7 +128,24 @@ run_ssh_node(){
   r=$(kubectl get pod sshjump 2>/dev/null | tail -1 | awk '{print $1}') # 
   if [ "${r}" != "sshjump" ];then
     echo "Creating SSH jump host (Pod)..."
-    kubectl run sshjump --image=corbinu/ssh-server --port=22 --restart=Never
+    cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sshjump
+  labels:
+    env: test
+spec:
+  containers:
+  - name: sshjump
+    image: corbinu/ssh-server
+    ports:
+    - containerPort: 22
+  nodeSelector:
+    "kubernetes.io/os": linux
+EOF
+
+    #kubectl run sshjump --image=corbinu/ssh-server --port=22 --restart=Never
     # Wait until sshjump gets ready
     c=1
     while [[ ${c} -le ${MAX_POD_CREATION_TIME} ]];
