@@ -145,7 +145,6 @@ spec:
     "kubernetes.io/os": linux
 EOF
 
-    #kubectl run sshjump --image=corbinu/ssh-server --port=22 --restart=Never
     # Wait until sshjump gets ready
     c=1
     while [[ ${c} -le ${MAX_POD_CREATION_TIME} ]];
