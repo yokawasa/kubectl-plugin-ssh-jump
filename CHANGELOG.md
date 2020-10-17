@@ -2,6 +2,9 @@
 
 All notable changes to the "kubectl-plugin-ssh-jump" extension will be documented in this file.
 
+## 0.5.0
+- Fix to address pod sshjump pod scheduling on hybrid clusters ([PR#9](https://github.com/yokawasa/kubectl-plugin-ssh-jump/pull/9), thanks to @swgriffith )
+
 ## 0.4.0
 
 - Support PEM (Privacy Enhanced Mail) scenario where you create key-pair but you only have .pem / private key (downloaded from AWS, for example) and you don't have the public key on your side.
