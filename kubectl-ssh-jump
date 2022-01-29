@@ -24,11 +24,14 @@ Options:
   <dest_node>                     Destination node name or IP address
                                   dest_node must start from the following letters:
                                   ASCII letters 'a' through 'z' or 'A' through 'Z',
-                                  the digits '0' through '9', or hyphen ('-')
+                                  the digits '0' through '9', or hyphen ('-').
+                                  NOTE: Setting dest_node as 'jumphost' allows to
+                                  ssh into SSH jump Pod as 'root' user
   -u, --user <sshuser>            SSH User name
   -i, --identity <identity_file>  Identity key file, or PEM(Privacy Enhanced Mail)
   -p, --pubkey <pub_key_file>     Public key file
-  -P, --port <port>               SSH port for target node SSH server (default:22)
+  -P, --port <port>               SSH port for target node SSH server
+                                  Defaults to 22
   -a, --args <args>               Args to exec in ssh session
   --skip-agent                    Skip automatically starting SSH agent and adding 
                                   SSH Identity key into the agent before SSH login
@@ -37,7 +40,7 @@ Options:
                                   The agent is NOT cleaned up in case that
                                   --skip-agent option is given
   --cleanup-jump                  Clearning up sshjump pod at the end
-                                  Default: Skip cleaning up sshjump pod
+                                  Defaults to skip cleaning up sshjump pod
   -h, --help                      Show this message
 
 Example:
@@ -181,11 +184,15 @@ EOF
   cat ${pubkey_sshjump} | \
     kubectl exec -i sshjump -- /bin/bash -c "cat > /root/.ssh/authorized_keys"
 
-  # Using the SSH Server as a jumphost (via port-forward proxy), ssh into the desired Node
-  ssh -i ${identity} -p ${port} ${sshuser}@${destnode} \
-    -o "ProxyCommand ssh root@127.0.0.1 -p 2222 -i ${identity_sshjump} -o \"StrictHostKeyChecking=no\" \"nc %h %p\"" \
-    -o "StrictHostKeyChecking=no" $sshargs
-
+  if [ "${dest_node}" = "sshjump" ]; then
+    ssh ${sshuser}@127.0.0.1 -p 2222 -i ${identity_sshjump} \
+      -o "StrictHostKeyChecking=no" $sshargs
+  else
+    # Using the SSH Server as a jumphost (via port-forward proxy), ssh into the desired Node
+    ssh -i ${identity} -p ${port} ${sshuser}@${destnode} \
+      -o "ProxyCommand ssh root@127.0.0.1 -p 2222 -i ${identity_sshjump} -o \"StrictHostKeyChecking=no\" \"nc %h %p\"" \
+      -o "StrictHostKeyChecking=no" $sshargs
+  fi
   # Stop port-forward
   kill -3 ${pid_port_forward} 2>/dev/null
 }
@@ -198,45 +205,45 @@ plugin_main() {
     nSkip=1
     case $1 in
       "-h" | "--help")
-	help
-	exit 0
-	;;
+        help
+        exit 0
+	      ;;
       "--cleanup-jump")
-	cleanup_jump=yes
-	;;
+        cleanup_jump=yes
+        ;;
       "--cleanup-agent")
-	cleanup_agent=yes
-	;;
+        cleanup_agent=yes
+        ;;
       "--skip-agent")
-	skip_agent=yes
-	;;
+        skip_agent=yes
+        ;;
       "-u" | "--user" )
-	c_sshuser=$2
-	nSkip=2
-	;;
+        c_sshuser=$2
+        nSkip=2
+        ;;
       "-i" | "--identity" )
-	c_identity=$2
-	nSkip=2
-	;;
+        c_identity=$2
+        nSkip=2
+        ;;
       "-p" | "--pubkey" )
-	c_pubkey=$2
-	nSkip=2
-	;;
+        c_pubkey=$2
+        nSkip=2
+        ;;
       "-P" | "--port")
-	c_port=$2
-	nSkip=2
-	;;
+        c_port=$2
+        nSkip=2
+        ;;
       "-a" | "--args" )
-	sshargs="$2"
-	nSkip=2
-	;;
+        sshargs="$2"
+        nSkip=2
+        ;;
       [0-9a-zA-Z-]*)
-	destnode=$1
-	;;
+        destnode=$1
+        ;;
       *)
-	help >&2
-	exit 1
-	;;
+        help >&2
+        exit 1
+        ;;
     esac
     shift $nSkip
   done
@@ -252,6 +259,10 @@ plugin_main() {
     echo ""
     get_node_list
     exit 1
+  fi
+  if [ "${dest_node}" = "sshjump" ]; then
+    echo "Setting dest_node as 'jumphost' allows to ssh into SSH jump Pod as 'root' user"
+    c_sshuser=root
   fi
 
   if [ ! -d ${PLUGIN_DIR} ]; then
