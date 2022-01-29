@@ -25,8 +25,8 @@ Options:
                                   dest_node must start from the following letters:
                                   ASCII letters 'a' through 'z' or 'A' through 'Z',
                                   the digits '0' through '9', or hyphen ('-').
-                                  NOTE: Setting dest_node as 'jumphost' allows to
-                                  ssh into SSH jump Pod as 'root' user
+                                  NOTE: Setting dest_node as 'jumphost' allows to 
+                                  ssh into SSH jump Pod as 'root' user 
   -u, --user <sshuser>            SSH User name
   -i, --identity <identity_file>  Identity key file, or PEM(Privacy Enhanced Mail)
   -p, --pubkey <pub_key_file>     Public key file
@@ -184,7 +184,7 @@ EOF
   cat ${pubkey_sshjump} | \
     kubectl exec -i sshjump -- /bin/bash -c "cat > /root/.ssh/authorized_keys"
 
-  if [ "${dest_node}" = "sshjump" ]; then
+  if [ "${destnode}" = "sshjump" ]; then
     ssh ${sshuser}@127.0.0.1 -p 2222 -i ${identity_sshjump} \
       -o "StrictHostKeyChecking=no" $sshargs
   else
@@ -260,8 +260,8 @@ plugin_main() {
     get_node_list
     exit 1
   fi
-  if [ "${dest_node}" = "sshjump" ]; then
-    echo "Setting dest_node as 'jumphost' allows to ssh into SSH jump Pod as 'root' user"
+  if [ "${destnode}" = "sshjump" ]; then
+    echo "Setting destination name as 'jumphost' allows to ssh into SSH jump Pod as 'root' user"
     c_sshuser=root
   fi
 
