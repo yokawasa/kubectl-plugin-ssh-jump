@@ -2,13 +2,17 @@
 
 [![kubectl plugin](https://img.shields.io/badge/kubectl-plugin-blue.svg)](https://github.com/topics/kubectl-plugin)
 
-A kubectl plugin to SSH into Kubernetes nodes using a SSH jump host Pod
+A kubectl plugin to access Kubernetes nodes or remote services using a SSH jump Pod
 
-A `jump host` Pod is an intermediary Pod or an SSH gateway to Kubernetes node machines, through which a connection can be made to the node machines.
+A `jump host` Pod is an intermediary Pod or an SSH gateway to Kubernetes node machines, through which a connection can be made to the node machines or remote services.
 
-Here is an scenario where you want to connect to Kubernetes node, but you have to go through a jump host Pod, because of firewalling, access privileges. etc. There is a number of valid reasons why the jump hosts are needed...
+Here is an scenario where you want to connect to Kubernetes nodes or remote services, but you have to go through a jump host Pod, because of firewalling, access privileges. etc. There is a number of valid reasons why the jump hosts are needed...
 
-![](assets/arch-ssh-jumphost.png)
+**CASE 1: SSH into Kubernetes nodes via SSH jump Pod**
+![](assets/ssh-jump-node-ssh-login.png)
+
+**CASE 2: Connect to remote serivces via SSH local port forwarding**. SSH local port forwarding allows to forward the traffic form local machine to SSH jump then SSH jump will forward the traffic to remote services (host:port)s. 
+![](assets/ssh-jump-ssh-tunnel.png)
 
 > [NOTE]
 > - Kubectl versions >= `1.12.0` (Preferred)
@@ -22,19 +26,22 @@ Here is an scenario where you want to connect to Kubernetes node, but you have t
 <!-- TOC -->
 
 - [kubectl-plugin-ssh-jump](#kubectl-plugin-ssh-jump)
-    - [Pre-requistes](#pre-requistes)
-    - [Installation](#installation)
-        - [Install through krew](#install-through-krew)
-        - [Manual Installation](#manual-installation)
-    - [How to use](#how-to-use)
-        - [Usage](#usage)
-            - [Option parameters Cache](#option-parameters-cache)
-            - [SSH Agent (ssh-agent)](#ssh-agent-ssh-agent)
-        - [Examples](#examples)
-            - [Scenario1 - You have private & public SSH key on your side](#scenario1---you-have-private--public-ssh-key-on-your-side)
-            - [Scenario2 - You have .pem file but you don't have public key on your side](#scenario2---you-have-pem-file-but-you-dont-have-public-key-on-your-side)
-    - [Useful Links](#useful-links)
-    - [Contributing](#contributing)
+	- [Pre-requistes](#pre-requistes)
+	- [Installation](#installation)
+		- [Install through krew](#install-through-krew)
+		- [Manual Installation](#manual-installation)
+	- [How to use](#how-to-use)
+		- [Usage](#usage)
+			- [Option parameters Cache](#option-parameters-cache)
+			- [SSH Agent (ssh-agent)](#ssh-agent-ssh-agent)
+		- [Examples](#examples)
+			- [CASE 1: SSH into Kubernetes nodes via SSH jump Pod](#case-1-ssh-into-kubernetes-nodes-via-ssh-jump-pod)
+				- [1-1 - You have private & public SSH key on your side](#1-1---you-have-private--public-ssh-key-on-your-side)
+				- [1-2 - You have .pem file but you don't have public key on your side](#1-2---you-have-pem-file-but-you-dont-have-public-key-on-your-side)
+			- [CASE 2: Access remote serivces via SSH local port forwarding](#case-2-access-remote-serivces-via-ssh-local-port-forwarding)
+				- [2-1 - Configuring SSH local port forwarding with --args or -a option](#2-1---configuring-ssh-local-port-forwarding-with---args-or--a-option)
+	- [Useful Links](#useful-links)
+	- [Contributing](#contributing)
 
 <!-- /TOC -->
 
@@ -75,8 +82,8 @@ $ kubectl plugin list
 
 The following kubectl-compatible plugins are available:
 
-/Users/yoichika/.krew/bin/kubectl-krew
-/Users/yoichika/.krew/bin/kubectl-ssh_jump
+/Users/yoichi.kawasaki/.krew/bin/kubectl-krew
+/Users/yoichi.kawasaki/.krew/bin/kubectl-ssh_jump
 
 $ kubectl ssh-jump
 ```
@@ -109,27 +116,30 @@ $ kubectl ssh-jump
 ### Usage
 
 ```TXT
-Usage:
+Usage: 
   kubectl ssh-jump <dest_node> [options]
 
 Options:
   <dest_node>                     Destination node name or IP address
                                   dest_node must start from the following letters:
                                   ASCII letters 'a' through 'z' or 'A' through 'Z',
-                                  the digits '0' through '9', or hyphen ('-'
+                                  the digits '0' through '9', or hyphen ('-').
+                                  NOTE: Setting dest_node as 'jumphost' allows to 
+                                  ssh into SSH jump Pod as 'root' user 
   -u, --user <sshuser>            SSH User name
   -i, --identity <identity_file>  Identity key file, or PEM(Privacy Enhanced Mail)
   -p, --pubkey <pub_key_file>     Public key file
-  -P, --port <port>               SSH port for target node SSH server (default:22)
+  -P, --port <port>               SSH port for target node SSH server
+                                  Defaults to 22
   -a, --args <args>               Args to exec in ssh session
-  --skip-agent                    Skip automatically starting SSH agent and adding
+  --skip-agent                    Skip automatically starting SSH agent and adding 
                                   SSH Identity key into the agent before SSH login
                                   (=> You need to manage SSH agent by yourself)
   --cleanup-agent                 Clearning up SSH agent at the end
                                   The agent is NOT cleaned up in case that
                                   --skip-agent option is given
   --cleanup-jump                  Clearning up sshjump pod at the end
-                                  Default: Skip cleaning up sshjump pod
+                                  Defaults to skip cleaning up sshjump pod
   -h, --help                      Show this message
 
 Example:
@@ -147,8 +157,8 @@ Example:
 ```sh
 $ cat $HOME/.kube/kubectlssh/options
 sshuser=myuser
-identity=/Users/yokawasa/.ssh/id_rsa_k8s
-pubkey=/Users/yokawasa/.ssh/id_rsa_k8s.pub
+identity=/Users/yoichi.kawasaki/.ssh/id_rsa_k8s
+pubkey=/Users/yoichi.kawasaki/.ssh/id_rsa_k8s.pub
 port=22
 ```
 
@@ -166,27 +176,30 @@ Show all node list. Simply executing `kubectl ssh-jump` gives you the list of de
 ```sh
 $ kubectl ssh-jump
 
-Usage:
+Usage: 
   kubectl ssh-jump <dest_node> [options]
 
 Options:
   <dest_node>                     Destination node name or IP address
                                   dest_node must start from the following letters:
                                   ASCII letters 'a' through 'z' or 'A' through 'Z',
-                                  the digits '0' through '9', or hyphen ('-')
+                                  the digits '0' through '9', or hyphen ('-').
+                                  NOTE: Setting dest_node as 'jumphost' allows to 
+                                  ssh into SSH jump Pod as 'root' user 
   -u, --user <sshuser>            SSH User name
   -i, --identity <identity_file>  Identity key file, or PEM(Privacy Enhanced Mail)
   -p, --pubkey <pub_key_file>     Public key file
-  -P, --port <port>               SSH port for target node SSH server (default:22)
+  -P, --port <port>               SSH port for target node SSH server
+                                  Defaults to 22
   -a, --args <args>               Args to exec in ssh session
-  --skip-agent                    Skip automatically starting SSH agent and adding
+  --skip-agent                    Skip automatically starting SSH agent and adding 
                                   SSH Identity key into the agent before SSH login
                                   (=> You need to manage SSH agent by yourself)
   --cleanup-agent                 Clearning up SSH agent at the end
                                   The agent is NOT cleaned up in case that
                                   --skip-agent option is given
   --cleanup-jump                  Clearning up sshjump pod at the end
-                                  Default: Skip cleaning up sshjump pod
+                                  Defaults to skip cleaning up sshjump pod
   -h, --help                      Show this message
 
 Example:
@@ -203,7 +216,10 @@ aks-nodepool1-18558189-0    10.240.0.4
 
 ```
 
-#### Scenario1 - You have private & public SSH key on your side
+
+#### CASE 1: SSH into Kubernetes nodes via SSH jump Pod
+
+##### 1-1 - You have private & public SSH key on your side
 
 Suppose you have private & public SSH key on your side and you want to SSH to a node named `aks-nodepool1-18558189-0`, execute the plugin with options like this:
 
@@ -232,7 +248,7 @@ echo "uname -a" | kubectl ssh-jump aks-nodepool1-18558189-0
 Linux aks-nodepool1-18558189-0 4.15.0-1035-azure #36~16.04.1-Ubuntu SMP Fri Nov 30 15:25:49 UTC 2018 x86_64 x86_64 x86_64 GNU/Linux
 ```
 
-You can pass commands by `args`
+You can pass commands with `--args` or `-a` option
 ``` sh
 kubectl ssh-jump aks-nodepool1-18558189-0 --args "uname -a"
 
@@ -272,7 +288,7 @@ $ kubectl ssh-jump aks-nodepool1-18558189-0 \
 $ ssh-agent -k
 ```
 
-#### Scenario2 - You have .pem file but you don't have public key on your side
+##### 1-2 - You have .pem file but you don't have public key on your side
 
 From v0.4.0, the plugin supports PEM (Privacy Enhanced Mail) scenario where you create key-pair but you only have .pem / private key (downloaded from AWS, for example) and you don't have the public key on your side.
 
@@ -284,6 +300,26 @@ Suppose you've already downloaded a pem file and you want to ssh to your EKS wor
 ```sh
 $ kubectl ssh-jump -u ec2-user -i ~/.ssh/mykey.pem ip-10-173-62-96.ap-northeast-1.compute.internal
 ```
+#### CASE 2: Access remote serivces via SSH local port forwarding
+
+SSH local port forwarding allows to forward the traffic form local machine to SSH jump then SSH jump will forward the traffic to remote services (host:port)s.
+##### 2-1 - Configuring SSH local port forwarding with --args or -a option
+
+Suppose you have private & public SSH key on your side and you want to access a remote server (IP: `10.100.10.8`) using `3389`/TCP port which is not accessible directly but accessible via SSH jump, execute the plugin with options like this, at first:
+
+- identity:`~/.ssh/id_rsa_k8s`
+- pubkey:`~/.ssh/id_rsa_k8s.pub`)
+
+ The command below allows to forward the traffic form local machine (`localhost:13200`) to SSH jump then SSH jump will forward the traffic to the remote server (`10.100.10.8:3389`). 
+```sh
+$ kubectl ssh-jump sshjump \
+  -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub \
+  -a "-L 13200:10.100.10.8:3389"
+```
+> - `sshjump` is the hostname for SSH jump Pod
+> -  The value for `--arg` or `-a` should be in this format: "-L local_port:remote_address:remote_port"
+
+Now, you're ready to access to the remote server at port 13200 at local machine.
 
 ## Useful Links
 
