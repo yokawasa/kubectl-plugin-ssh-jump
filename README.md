@@ -169,6 +169,12 @@ Add `--cleanup-agent` option if you want to kill the created agent at the end of
 
 In addtion, add `--skip-agent` option if you want to skip automatic starting `ssh-agent`. This is actually a case where you already have ssh-agent managed or you want to manually start the agent.
 
+### Customize SSH jump pod
+
+You can customize the sshjump pod created by `kubectl ssh-jump` by setting the `$SSH_JUMP_POD_TEMPLATE` environment variable to the path to a pod template on disk.
+
+However, customized sshjump pods must be named `sshjump` and run in the current namespace or `kubectl ssh-jump` won't be able to find them.
+
 ### Examples
 
 Show all node list. Simply executing `kubectl ssh-jump` gives you the list of destination nodes as well as command usage
@@ -208,6 +214,9 @@ Example:
 
   Scenario2 - You have .pem file but you don't have public key on your side
   $ kubectl ssh-jump -u ec2-user -i ~/.ssh/mykey.pem hostname
+
+  Scenario3 - You want to use a custom sshjump pod definition
+  $ kubectl ssh-jump -u ec2-user -i ~/.ssh/mykey.pem --pod-template ~/myjumppod.yaml hostname
 
 List of destination node...
 Hostname                    Internal-IP

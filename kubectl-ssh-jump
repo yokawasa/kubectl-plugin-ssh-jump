@@ -33,6 +33,7 @@ Options:
   -P, --port <port>               SSH port for target node SSH server
                                   Defaults to 22
   -a, --args <args>               Args to exec in ssh session
+  --pod-template <file>           Path to custom sshjump pod definition
   --skip-agent                    Skip automatically starting SSH agent and adding 
                                   SSH Identity key into the agent before SSH login
                                   (=> You need to manage SSH agent by yourself)
@@ -119,19 +120,13 @@ cleanup_agent(){
   fi 
 }
 
-run_ssh_node(){
-  local destnode="$1"
-  local sshuser="$2"
-  local identity="$3"
-  local pubkey="$4"
-  local port="$5"
-  local sshargs="$6"
-
-  # Install an SSH Server if not yet installed
-  r=$(kubectl get pod sshjump 2>/dev/null | tail -1 | awk '{print $1}') # 
-  if [ "${r}" != "sshjump" ];then
-    echo "Creating SSH jump host (Pod)..."
-    cat <<EOF | kubectl apply -f -
+create_jump_pod(){
+  local pod_template
+  if [[ -n "${jump_pod_template:-}" && -e "${jump_pod_template}" ]]; then
+    pod_template=$(<"${jump_pod_template}")
+  fi
+  if [[ -z "${pod_template}" ]]; then
+    pod_template=$(cat <<EOF
 apiVersion: v1
 kind: Pod
 metadata:
@@ -147,6 +142,24 @@ spec:
   nodeSelector:
     "kubernetes.io/os": linux
 EOF
+)
+  fi
+  echo "Creating SSH jump host (Pod)..."
+  echo "${pod_template}" | kubectl apply -f -
+}
+
+run_ssh_node(){
+  local destnode="$1"
+  local sshuser="$2"
+  local identity="$3"
+  local pubkey="$4"
+  local port="$5"
+  local sshargs="$6"
+
+  # Install an SSH Server if not yet installed
+  r=$(kubectl get pod sshjump 2>/dev/null | tail -1 | awk '{print $1}') # 
+  if [ "${r}" != "sshjump" ];then
+    create_jump_pod
 
     # Wait until sshjump gets ready
     c=1
@@ -237,6 +250,10 @@ plugin_main() {
         sshargs="$2"
         nSkip=2
         ;;
+      "--pod-template")
+         jump_pod_template="$2"
+         nSkip=2
+         ;;
       [0-9a-zA-Z-]*)
         destnode=$1
         ;;
@@ -308,6 +325,10 @@ plugin_main() {
 
   if [ "${sshargs}" != "" ]; then
     echo "using: args=${sshargs}"
+  fi
+
+  if [ "${jump_pod_template}" != "" ]; then
+     echo "using: pod-template=${jump_pod_template}"
   fi
 
   # Caching current ssh options
