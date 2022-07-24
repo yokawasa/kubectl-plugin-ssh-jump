@@ -34,6 +34,7 @@ Here is an scenario where you want to connect to Kubernetes nodes or remote serv
 		- [Usage](#usage)
 			- [Option parameters Cache](#option-parameters-cache)
 			- [SSH Agent (ssh-agent)](#ssh-agent-ssh-agent)
+		- [Customize SSH jump pod](#customize-ssh-jump-pod)
 		- [Examples](#examples)
 			- [CASE 1: SSH into Kubernetes nodes via SSH jump Pod](#case-1-ssh-into-kubernetes-nodes-via-ssh-jump-pod)
 				- [1-1 - You have private & public SSH key on your side](#1-1---you-have-private--public-ssh-key-on-your-side)
@@ -132,6 +133,7 @@ Options:
   -P, --port <port>               SSH port for target node SSH server
                                   Defaults to 22
   -a, --args <args>               Args to exec in ssh session
+  --pod-template <file>           Path to custom sshjump pod definition
   --skip-agent                    Skip automatically starting SSH agent and adding 
                                   SSH Identity key into the agent before SSH login
                                   (=> You need to manage SSH agent by yourself)
