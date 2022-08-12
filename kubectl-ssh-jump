@@ -199,12 +199,12 @@ run_ssh_node(){
 
   if [ "${destnode}" = "sshjump" ]; then
     ssh ${sshuser}@127.0.0.1 -p 2222 -i ${identity_sshjump} \
-      -o "StrictHostKeyChecking=no" $sshargs
+      -o StrictHostKeyChecking=no -o HostkeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa $sshargs
   else
     # Using the SSH Server as a jumphost (via port-forward proxy), ssh into the desired Node
     ssh -i ${identity} -p ${port} ${sshuser}@${destnode} \
       -o "ProxyCommand ssh root@127.0.0.1 -p 2222 -i ${identity_sshjump} -o \"StrictHostKeyChecking=no\" \"nc %h %p\"" \
-      -o "StrictHostKeyChecking=no" $sshargs
+      -o StrictHostKeyChecking=no -o HostkeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa $sshargs
   fi
   # Stop port-forward
   kill -3 ${pid_port_forward} 2>/dev/null
