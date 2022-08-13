@@ -2,11 +2,13 @@
 
 All notable changes to the "kubectl-plugin-ssh-jump" extension will be documented in this file.
 
+## 0.8.0
+
+- Add verbose option (`-v|--verbose`)
+
 ## 0.7.1
 
 - Fix `root@127.0.0.1: Permission denied (publickey)` issue ([#13](https://github.com/yokawasa/kubectl-plugin-ssh-jump/issues/13)) by adding options like `-o HostkeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa` which works for newer ssh client scenario
-
-
 
 ## 0.7.0
 
