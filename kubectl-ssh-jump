@@ -42,6 +42,7 @@ Options:
                                   --skip-agent option is given
   --cleanup-jump                  Clearning up sshjump pod at the end
                                   Defaults to skip cleaning up sshjump pod
+  -v, --verbose                   Run ssh in verbose mode (=ssh -vvv)
   -h, --help                      Show this message
 
 Example:
@@ -214,6 +215,8 @@ plugin_main() {
   skip_agent=no
   cleanup_jump=no
   cleanup_agent=no
+  verbose=no
+  sshargs=""
   while [ $# -gt 0 ] ; do
     nSkip=1
     case $1 in
@@ -221,7 +224,10 @@ plugin_main() {
         help
         exit 0
 	      ;;
-      "--cleanup-jump")
+      "-v" | "--verbose" )
+        sshargs="${sshargs} -vvv"
+        ;;
+     "--cleanup-jump")
         cleanup_jump=yes
         ;;
       "--cleanup-agent")
@@ -247,7 +253,7 @@ plugin_main() {
         nSkip=2
         ;;
       "-a" | "--args" )
-        sshargs="$2"
+        sshargs="${sshargs} $2"
         nSkip=2
         ;;
       "--pod-template")

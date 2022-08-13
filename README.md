@@ -142,6 +142,7 @@ Options:
                                   --skip-agent option is given
   --cleanup-jump                  Clearning up sshjump pod at the end
                                   Defaults to skip cleaning up sshjump pod
+  -v, --verbose                   Run ssh in verbose mode (=ssh -vvv)
   -h, --help                      Show this message
 
 Example:
@@ -200,6 +201,7 @@ Options:
   -P, --port <port>               SSH port for target node SSH server
                                   Defaults to 22
   -a, --args <args>               Args to exec in ssh session
+  --pod-template <file>           Path to custom sshjump pod definition
   --skip-agent                    Skip automatically starting SSH agent and adding 
                                   SSH Identity key into the agent before SSH login
                                   (=> You need to manage SSH agent by yourself)
@@ -217,14 +219,10 @@ Example:
   Scenario2 - You have .pem file but you don't have public key on your side
   $ kubectl ssh-jump -u ec2-user -i ~/.ssh/mykey.pem hostname
 
-  Scenario3 - You want to use a custom sshjump pod definition
-  $ kubectl ssh-jump -u ec2-user -i ~/.ssh/mykey.pem --pod-template ~/myjumppod.yaml hostname
-
 List of destination node...
 Hostname                    Internal-IP
 aks-nodepool1-18558189-0    10.240.0.4
 ...
-
 ```
 
 
