@@ -42,6 +42,7 @@ Options:
                                   --skip-agent option is given
   --cleanup-jump                  Clearning up sshjump pod at the end
                                   Defaults to skip cleaning up sshjump pod
+  -v, --verbose                   Run ssh in verbose mode (=ssh -vvv)
   -h, --help                      Show this message
 
 Example:
@@ -79,6 +80,10 @@ get_node_list(){
   echo "List of destination node..."
   kubectl get no -o custom-columns=Hostname:.metadata.name,Internal-IP:'{.status.addresses[?(@.type=="InternalIP")].address}'
   echo ""
+}
+
+get_openssh_verion_number() {
+  ssh -V 2>&1 | awk -F'[_,]' '{print $2+0}'
 }
 
 cleanup_sshjump_pod(){
@@ -197,14 +202,21 @@ run_ssh_node(){
   cat ${pubkey_sshjump} | \
     kubectl exec -i sshjump -- /bin/bash -c "cat > /root/.ssh/authorized_keys"
 
+  # Add default ssh option
+  sshargs="${sshargs} -o StrictHostKeyChecking=no"
+ 
+  # Add RSA workaround options if the local OpenSSH version >= 8.5
+  sshversion=$(get_openssh_verion_number)
+  if [ $(echo "${sshversion} >= 8.5" | bc) -eq 1 ]; then
+    sshargs="${sshargs} -o HostkeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa"
+  fi
+
   if [ "${destnode}" = "sshjump" ]; then
-    ssh ${sshuser}@127.0.0.1 -p 2222 -i ${identity_sshjump} \
-      -o StrictHostKeyChecking=no -o HostkeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa $sshargs
+    ssh ${sshuser}@127.0.0.1 -p 2222 -i ${identity_sshjump} $sshargs
   else
     # Using the SSH Server as a jumphost (via port-forward proxy), ssh into the desired Node
     ssh -i ${identity} -p ${port} ${sshuser}@${destnode} \
-      -o "ProxyCommand ssh root@127.0.0.1 -p 2222 -i ${identity_sshjump} -o \"StrictHostKeyChecking=no\" \"nc %h %p\"" \
-      -o StrictHostKeyChecking=no -o HostkeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa $sshargs
+      -o "ProxyCommand ssh root@127.0.0.1 -p 2222 -i ${identity_sshjump} -o \"StrictHostKeyChecking=no\" \"nc %h %p\"" $sshargs
   fi
   # Stop port-forward
   kill -3 ${pid_port_forward} 2>/dev/null
@@ -214,6 +226,7 @@ plugin_main() {
   skip_agent=no
   cleanup_jump=no
   cleanup_agent=no
+  sshargs=""
   while [ $# -gt 0 ] ; do
     nSkip=1
     case $1 in
@@ -221,7 +234,10 @@ plugin_main() {
         help
         exit 0
 	      ;;
-      "--cleanup-jump")
+      "-v" | "--verbose" )
+        sshargs="${sshargs} -vvv"
+        ;;
+     "--cleanup-jump")
         cleanup_jump=yes
         ;;
       "--cleanup-agent")
@@ -247,7 +263,7 @@ plugin_main() {
         nSkip=2
         ;;
       "-a" | "--args" )
-        sshargs="$2"
+        sshargs="${sshargs} $2"
         nSkip=2
         ;;
       "--pod-template")
