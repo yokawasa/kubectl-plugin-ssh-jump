@@ -2,11 +2,15 @@
 
 All notable changes to the "kubectl-plugin-ssh-jump" extension will be documented in this file.
 
+## 0.7.2
+
+- Fix `Bad configuration option: pubkeyacceptedalgorithms` issue ([#18](https://github.com/yokawasa/kubectl-plugin-ssh-jump/issues/18))
+  - Add OpenSSH version check
+  - Add RSA workaround options (`-o HostkeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa`) introduced in [ssh-jump-0.7.1](https://github.com/yokawasa/kubectl-plugin-ssh-jump/releases/tag/0.7.1) only if the local OpenSSH version >= `8.5`
 ## 0.7.1
 
-- Fix `root@127.0.0.1: Permission denied (publickey)` issue ([#13](https://github.com/yokawasa/kubectl-plugin-ssh-jump/issues/13)) by adding options like `-o HostkeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa` which works for newer ssh client scenario
-
-
+- Fix `root@127.0.0.1: Permission denied (publickey)` issue ([#13](https://github.com/yokawasa/kubectl-plugin-ssh-jump/issues/13))
+  - Add options like `-o HostkeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa` which works for newer ssh client (`OpenSSH 8.5+`) scenario
 
 ## 0.7.0
 
