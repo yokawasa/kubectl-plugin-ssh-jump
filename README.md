@@ -17,7 +17,7 @@ Here is an scenario where you want to connect to Kubernetes nodes or remote serv
 > [NOTE]
 > - Kubectl versions >= `1.12.0` (Preferred)
 >   - As of Kubernetes 1.12, kubectl now allows adding external executables as subcommands. For more detail, see [Extend kubectl with plugins](https://kubernetes.io/docs/tasks/extend-kubectl/kubectl-plugins/)
->   - You can run the pluin with `kubectl ssh-jump ...`
+>   - You can run the plugin with `kubectl ssh-jump ...`
 > - Kubectl versions < `1.12.0`
 >   - You still can run the plugin directly with `kubectl-ssh-jump ...`
 
