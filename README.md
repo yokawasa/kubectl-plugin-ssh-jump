@@ -33,14 +33,14 @@ Here is an scenario where you want to connect to Kubernetes nodes or remote serv
 	- [How to use](#how-to-use)
 		- [Usage](#usage)
 			- [Option parameters Cache](#option-parameters-cache)
-			- [SSH Agent (ssh-agent)](#ssh-agent-ssh-agent)
+			- [SSH Agent ssh-agent](#ssh-agent-ssh-agent)
 		- [Customize SSH jump pod](#customize-ssh-jump-pod)
 		- [Examples](#examples)
 			- [CASE 1: SSH into Kubernetes nodes via SSH jump Pod](#case-1-ssh-into-kubernetes-nodes-via-ssh-jump-pod)
-				- [1-1 - You have private & public SSH key on your side](#1-1---you-have-private--public-ssh-key-on-your-side)
-				- [1-2 - You have .pem file but you don't have public key on your side](#1-2---you-have-pem-file-but-you-dont-have-public-key-on-your-side)
+				- [-1 - You have private & public SSH key on your side](#-1---you-have-private--public-ssh-key-on-your-side)
+				- [-2 - You have .pem file but you don't have public key on your side](#-2---you-have-pem-file-but-you-dont-have-public-key-on-your-side)
 			- [CASE 2: Access remote serivces via SSH local port forwarding](#case-2-access-remote-serivces-via-ssh-local-port-forwarding)
-				- [2-1 - Configuring SSH local port forwarding with --args or -a option](#2-1---configuring-ssh-local-port-forwarding-with---args-or--a-option)
+				- [-1 - Configuring SSH local port forwarding with --args or -a option](#-1---configuring-ssh-local-port-forwarding-with---args-or--a-option)
 	- [Useful Links](#useful-links)
 	- [Contributing](#contributing)
 
@@ -191,41 +191,12 @@ $ kubectl ssh-jump
 Usage: 
   kubectl ssh-jump <dest_node> [options]
 
-Options:
-  <dest_node>                     Destination node name or IP address
-                                  dest_node must start from the following letters:
-                                  ASCII letters 'a' through 'z' or 'A' through 'Z',
-                                  the digits '0' through '9', or hyphen ('-').
-                                  NOTE: Setting dest_node as 'jumphost' allows to 
-                                  ssh into SSH jump Pod as 'root' user 
-  -u, --user <sshuser>            SSH User name
-  -i, --identity <identity_file>  Identity key file, or PEM(Privacy Enhanced Mail)
-  -p, --pubkey <pub_key_file>     Public key file
-  -P, --port <port>               SSH port for target node SSH server
-                                  Defaults to 22
-  -a, --args <args>               Args to exec in ssh session
-  --pod-template <file>           Path to custom sshjump pod definition
-  --skip-agent                    Skip automatically starting SSH agent and adding 
-                                  SSH Identity key into the agent before SSH login
-                                  (=> You need to manage SSH agent by yourself)
-  --cleanup-agent                 Clearning up SSH agent at the end
-                                  The agent is NOT cleaned up in case that
-                                  --skip-agent option is given
-  --cleanup-jump                  Clearning up sshjump pod at the end
-                                  Defaults to skip cleaning up sshjump pod
-  -h, --help                      Show this message
-
-Example:
-  Scenario1 - You have private & public SSH key on your side
-  $ kubectl ssh-jump -u myuser -i ~/.ssh/id_rsa -p ~/.ssh/id_rsa.pub hostname
-
-  Scenario2 - You have .pem file but you don't have public key on your side
-  $ kubectl ssh-jump -u ec2-user -i ~/.ssh/mykey.pem hostname
+...snip...
 
 List of destination node...
 Hostname                    Internal-IP
 aks-nodepool1-18558189-0    10.240.0.4
-...
+...snip...
 ```
 
 
@@ -235,13 +206,13 @@ aks-nodepool1-18558189-0    10.240.0.4
 
 Suppose you have private & public SSH key on your side and you want to SSH to a node named `aks-nodepool1-18558189-0`, execute the plugin with options like this:
 
-- usernaem: `myuser`
+- usernaem: `azureuser`
 - identity:`~/.ssh/id_rsa_k8s`
 - pubkey:`~/.ssh/id_rsa_k8s.pub`)
 
 ```sh
 $ kubectl ssh-jump aks-nodepool1-18558189-0 \
-  -u myuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub
+  -u azureuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub
 ```
 
 > [NOTE] you can try SSH into a node using node IP address (`Internal-IP`) instead of `Hostname`
@@ -272,7 +243,7 @@ You can clean up sshjump pod at the end of the command with `--cleanup-jump` opt
 
 ```sh
 $ kubectl ssh-jump aks-nodepool1-18558189-0 \
-  -u myuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub \
+  -u azureuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub \
   --cleanup-jump
 ```
 
@@ -280,7 +251,7 @@ You can clean up ssh-agent at the end of the command with `--cleanup-agent` opti
 
 ```sh
 $ kubectl ssh-jump aks-nodepool1-18558189-0 \
-  -u myuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub \
+  -u azureuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub \
   --cleanup-agent
 ```
 
@@ -293,7 +264,7 @@ $ eval `ssh-agent`
 $ ssh-add ~/.ssh/id_rsa_k8s
 # Then, run the plugin with --skip-agent
 $ kubectl ssh-jump aks-nodepool1-18558189-0 \
-  -u myuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub \
+  -u azureuser -i ~/.ssh/id_rsa_k8s -p ~/.ssh/id_rsa_k8s.pub \
   --skip-agent
 
 # At the end, run this if you want to kill the current agent
