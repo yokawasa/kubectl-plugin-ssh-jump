@@ -33,6 +33,8 @@ Options:
   -P, --port <port>               SSH port for target node SSH server
                                   Defaults to 22
   -a, --args <args>               Args to exec in ssh session
+  -n, --namespace <ns>            Namespace for jump pod
+  --context <context>             Kubernetes context
   --pod-template <file>           Path to custom sshjump pod definition
   --skip-agent                    Skip automatically starting SSH agent and adding 
                                   SSH Identity key into the agent before SSH login
@@ -78,7 +80,7 @@ EOF
 
 get_node_list(){
   echo "List of destination node..."
-  kubectl get no -o custom-columns=Hostname:.metadata.name,Internal-IP:'{.status.addresses[?(@.type=="InternalIP")].address}'
+  kubectl "${k_args[@]}" get no -o custom-columns=Hostname:.metadata.name,Internal-IP:'{.status.addresses[?(@.type=="InternalIP")].address}'
   echo ""
 }
 
@@ -88,7 +90,7 @@ get_openssh_verion_number() {
 
 cleanup_sshjump_pod(){
   echo "Clearning up SSH Jump host (Pod)..."
-  kubectl delete pod sshjump
+  kubectl "${k_args[@]}" delete pod sshjump
 }
 
 check_and_start_agent(){
@@ -150,7 +152,7 @@ EOF
 )
   fi
   echo "Creating SSH jump host (Pod)..."
-  echo "${pod_template}" | kubectl apply -f -
+  echo "${pod_template}" | kubectl "${k_args[@]}" apply -f -
 }
 
 run_ssh_node(){
@@ -162,7 +164,7 @@ run_ssh_node(){
   local sshargs="$6"
 
   # Install an SSH Server if not yet installed
-  r=$(kubectl get pod sshjump 2>/dev/null | tail -1 | awk '{print $1}') # 
+  r=$(kubectl "${k_args[@]}" get pod sshjump 2>/dev/null | tail -1 | awk '{print $1}') # 
   if [ "${r}" != "sshjump" ];then
     create_jump_pod
 
@@ -170,7 +172,7 @@ run_ssh_node(){
     c=1
     while [[ ${c} -le ${MAX_POD_CREATION_TIME} ]];
     do
-      pod_status=$(kubectl get pod sshjump 2>/dev/null | tail -1 | awk '{print $3}')
+      pod_status=$(kubectl "${k_args[@]}" get pod sshjump 2>/dev/null | tail -1 | awk '{print $3}')
       if [ "${pod_status}" = "Running" ]; then
         break
       fi
@@ -192,7 +194,7 @@ run_ssh_node(){
   fi
 
   # Setup portforward
-  kubectl port-forward sshjump 2222:22 2>/dev/null &
+  kubectl "${k_args[@]}" port-forward sshjump 2222:22 2>/dev/null &
   pid_port_forward=$!
 
   # Wait a bit for the port forwarding to get ready for connection handling for 2222
@@ -200,7 +202,7 @@ run_ssh_node(){
 
   # Inject public SSH key to sshjump
   cat ${pubkey_sshjump} | \
-    kubectl exec -i sshjump -- /bin/bash -c "cat > /root/.ssh/authorized_keys"
+    kubectl "${k_args[@]}" exec -i sshjump -- /bin/bash -c "cat > /root/.ssh/authorized_keys"
 
   # Add default ssh option
   sshargs="${sshargs} -o StrictHostKeyChecking=no"
@@ -227,6 +229,7 @@ plugin_main() {
   cleanup_jump=no
   cleanup_agent=no
   sshargs=""
+  k_args=()
   while [ $# -gt 0 ] ; do
     nSkip=1
     case $1 in
@@ -266,6 +269,10 @@ plugin_main() {
         sshargs="${sshargs} $2"
         nSkip=2
         ;;
+      "-n" | "--namespace" | "--context")
+         k_args+=("$1" "$2")
+         nSkip=2
+         ;;
       "--pod-template")
          jump_pod_template="$2"
          nSkip=2

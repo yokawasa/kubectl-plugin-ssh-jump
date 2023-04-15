@@ -125,16 +125,18 @@ Options:
                                   dest_node must start from the following letters:
                                   ASCII letters 'a' through 'z' or 'A' through 'Z',
                                   the digits '0' through '9', or hyphen ('-').
-                                  NOTE: Setting dest_node as 'jumphost' allows to 
-                                  ssh into SSH jump Pod as 'root' user 
+                                  NOTE: Setting dest_node as 'jumphost' allows to
+                                  ssh into SSH jump Pod as 'root' user
   -u, --user <sshuser>            SSH User name
   -i, --identity <identity_file>  Identity key file, or PEM(Privacy Enhanced Mail)
   -p, --pubkey <pub_key_file>     Public key file
   -P, --port <port>               SSH port for target node SSH server
                                   Defaults to 22
   -a, --args <args>               Args to exec in ssh session
+  -n, --namespace <ns>            Namespace for jump pod
+  --context <context>             Kubernetes context
   --pod-template <file>           Path to custom sshjump pod definition
-  --skip-agent                    Skip automatically starting SSH agent and adding 
+  --skip-agent                    Skip automatically starting SSH agent and adding
                                   SSH Identity key into the agent before SSH login
                                   (=> You need to manage SSH agent by yourself)
   --cleanup-agent                 Clearning up SSH agent at the end
@@ -174,9 +176,10 @@ In addtion, add `--skip-agent` option if you want to skip automatic starting `ss
 
 ### Customize SSH jump pod
 
-You can customize the sshjump pod created by `kubectl ssh-jump` by setting the `$SSH_JUMP_POD_TEMPLATE` environment variable to the path to a pod template on disk.
-
+You can customize the sshjump pod created by `kubectl ssh-jump` by setting the `--pod-template` flag to the path to a pod template on disk.
 However, customized sshjump pods must be named `sshjump` and run in the current namespace or `kubectl ssh-jump` won't be able to find them.
+
+You can also specify the namespace and context used by `kubectl ssh-jump` by setting the `--namespace` and `--context` flags respectively.
 
 ### Examples
 
