@@ -2,6 +2,11 @@
 
 All notable changes to the "kubectl-plugin-ssh-jump" extension will be documented in this file.
 
+## 0.8.0
+
+- Support providing namespace and context by @partcyborg ([#23](https://github.com/yokawasa/kubectl-plugin-ssh-jump/pull/23))
+
+
 ## 0.7.3
 
 - Fix `Connection closed by remote host connection closed by unknown port 65535` issue ([#16](https://github.com/yokawasa/kubectl-plugin-ssh-jump/issues/16))
