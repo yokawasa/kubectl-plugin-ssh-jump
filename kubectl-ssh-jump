@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# vim: sw=2:
 #
 # A kubectl plugin to ssh into Kubernetes nodes using a SSH jump host Pod
 #
@@ -36,6 +37,7 @@ Options:
   -n, --namespace <ns>            Namespace for jump pod
   --context <context>             Kubernetes context
   --pod-template <file>           Path to custom sshjump pod definition
+  -l, --labels <key>=<val>[,...]  Find a pre-existing sshjump pod using labels
   --skip-agent                    Skip automatically starting SSH agent and adding 
                                   SSH Identity key into the agent before SSH login
                                   (=> You need to manage SSH agent by yourself)
@@ -163,23 +165,34 @@ run_ssh_node(){
   local pubkey="$4"
   local port="$5"
   local sshargs="$6"
+  local pod_labels="$7"
 
-  # Install an SSH Server if not yet installed
-  r=$(kubectl "${k_args[@]}" get pod sshjump 2>/dev/null | tail -1 | awk '{print $1}') # 
-  if [ "${r}" != "sshjump" ];then
-    create_jump_pod
-
-    # Wait until sshjump gets ready
-    c=1
-    while [[ ${c} -le ${MAX_POD_CREATION_TIME} ]];
-    do
-      pod_status=$(kubectl "${k_args[@]}" get pod sshjump 2>/dev/null | tail -1 | awk '{print $3}')
-      if [ "${pod_status}" = "Running" ]; then
-        break
-      fi
-      (( c++ ))
-      sleep 1
-    done
+  local pod_name
+  if [[ -n "${pod_labels}" ]]; then
+    pods=($(kubectl "${k_args[@]}" get pods -l "${pod_labels}" -o custom-columns=:metadata.name --no-headers 2>/dev/null))
+    if [[ "${#pods[@]}" -eq 0 ]]; then
+      echo "Error: failed to find pods with labels ${pod_labels}" >&2
+      exit 1
+    fi
+    pod_name="${pods[0]}"
+    echo "Using SSH jump pod ${pod_name}..."
+  else
+    pod_name=sshjump
+    # Install an SSH Server if not yet installed
+    if ! kubectl "${k_args[@]}" get pod "${pod_name}" &>/dev/null; then
+      create_jump_pod
+      # Wait until sshjump gets ready
+      c=1
+      while [[ ${c} -le ${MAX_POD_CREATION_TIME} ]];
+      do
+        pod_status=$(kubectl "${k_args[@]}" get pod "${pod_name}" -o jsonpath='{.status.phase}')
+        if [[ "${pod_status}" == "Running" ]]; then
+          break
+        fi
+        (( c++ ))
+        sleep 1
+      done
+    fi
   fi
 
   local identity_sshjump=${identity}
@@ -195,7 +208,7 @@ run_ssh_node(){
   fi
 
   # Setup portforward
-  kubectl "${k_args[@]}" port-forward sshjump 2222:22 2>/dev/null &
+  kubectl "${k_args[@]}" port-forward "${pod_name}" 2222:22 2>/dev/null &
   pid_port_forward=$!
 
   # Wait a bit for the port forwarding to get ready for connection handling for 2222
@@ -203,7 +216,7 @@ run_ssh_node(){
 
   # Inject public SSH key to sshjump
   cat ${pubkey_sshjump} | \
-    kubectl "${k_args[@]}" exec -i sshjump -- /bin/bash -c "cat > /root/.ssh/authorized_keys"
+    kubectl "${k_args[@]}" exec -i "${pod_name}" -- /bin/bash -c "cat > /root/.ssh/authorized_keys"
 
   # Add default ssh option
   sshargs="${sshargs} -o StrictHostKeyChecking=no"
@@ -229,6 +242,7 @@ plugin_main() {
   skip_agent=no
   cleanup_jump=no
   cleanup_agent=no
+  pod_labels=
   sshargs=""
   k_args=()
   while [ $# -gt 0 ] ; do
@@ -278,6 +292,10 @@ plugin_main() {
          jump_pod_template="$2"
          nSkip=2
          ;;
+      "-l" | "--labels")
+        pod_labels="$2"
+        nSkip=2
+        ;;
       [0-9a-zA-Z-]*)
         destnode=$1
         ;;
@@ -362,13 +380,13 @@ plugin_main() {
     check_and_start_agent ${c_identity}
   fi
   # SSH Logging into desitnation node via Jump host
-  run_ssh_node "${destnode}" "${c_sshuser}" "${c_identity}" "${c_pubkey}" "${c_port}" "${sshargs}"
+  run_ssh_node "${destnode}" "${c_sshuser}" "${c_identity}" "${c_pubkey}" "${c_port}" "${sshargs}" "${pod_labels}"
 
   # Cleaning up resources if needed
-  if [ "${cleanup_jump}" = "yes" ]; then
+  if [[ "${cleanup_jump}" == "yes" && -z "${pod_labels}" ]]; then
     cleanup_sshjump_pod
   fi
-  if [ "${skip_agent}" = "no" ] && [ "${cleanup_agent}" = "yes" ]; then
+  if [[ "${skip_agent}" = "no" && "${cleanup_agent}" = "yes" ]]; then
     cleanup_agent
   fi
 }
