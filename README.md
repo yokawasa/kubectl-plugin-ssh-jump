@@ -136,6 +136,7 @@ Options:
   -n, --namespace <ns>            Namespace for jump pod
   --context <context>             Kubernetes context
   --pod-template <file>           Path to custom sshjump pod definition
+  -l, --labels <key>=<val>[,...]  Find a pre-existing sshjump pod using labels
   --skip-agent                    Skip automatically starting SSH agent and adding
                                   SSH Identity key into the agent before SSH login
                                   (=> You need to manage SSH agent by yourself)
@@ -177,7 +178,8 @@ In addtion, add `--skip-agent` option if you want to skip automatic starting `ss
 ### Customize SSH jump pod
 
 You can customize the sshjump pod created by `kubectl ssh-jump` by setting the `--pod-template` flag to the path to a pod template on disk.
-However, customized sshjump pods must be named `sshjump` and run in the current namespace or `kubectl ssh-jump` won't be able to find them.
+However, customized sshjump pods must be named `sshjump` and run in the current namespace or `kubectl ssh-jump` won't be able to find them without the required flags.
+If you change the pod name, you must give the pod a unique set of labels and provide them on the command line by setting the `--labels` flag.
 
 You can also specify the namespace and context used by `kubectl ssh-jump` by setting the `--namespace` and `--context` flags respectively.
 
